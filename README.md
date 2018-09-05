@@ -1,5 +1,5 @@
 # python-p2p-network
-Basic peer-to-peer TCP/IP network node to implement decentralized peer-to-peer network applications.
+Basic peer-to-peer TCP/IP network node to implement decentralized peer-to-peer network applications. Use at your own risk!
 
 ## Description
 TcpServerNode creates a TCP/IP server on the port you have given. It accepts incoming nodes and put these into its  
@@ -8,6 +8,34 @@ internal datastructure. When nodes disconnect, the nodes are removed. Events are
 data to these nodes is easy as well. The datastructure is up to you and how you implement the protocol to form the  
 decentralized peer-to-peer network. This class is at you disposal to use within your code to speed up the           
 development.                                                                                                        
+
+## New node
+n = Node(host, port, callbackNodeEvent)
+
+Example: n = Node('localhost', 10000, callbackNodeEvent)
+
+Creates a node on port 1000 and sends all the events to the function callbackNodeEvent.
+
+## Connecting with other nodes
+To become part of the p2p network, it is required to connect to some other nodes that already form the network.
+
+node.connectWithNode(ip/host, port)
+
+Example: node.connectWithNode(11.22.33.44, 20000)
+
+## Callback function to capture events
+def callbackNodeEvent(event, node, other, data):
+
+node, the server node that is assiocated with this event.
+other, the node that the server node is connected with
+data, when available this holds the data as python data variable
+
+Event callback is called by the node. node is the object that generated the event. other is the node that caused the event. The following even types exist:
++ NODEINBOUNDCLOSED – Connected node closed
++ NODEOUTBOUNDCLOSED – Connection with node closed
++ CONNECTEDWITHNODE – Connection with node established
++ NODECONNECTED – Node connected with the server
++ NODEMESSAGE – Message from a connected node (data available)
 
 ## Example
 from TcpServerNode import Node
