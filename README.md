@@ -38,6 +38,7 @@ Event callback is called by the node. node is the object that generated the even
 + NODEMESSAGE – Message from a connected node (data available)
 
 ## Example
+```python
 from TcpServerNode import Node
 
 node = None # global variable
@@ -61,4 +62,5 @@ while ( 1 ):
 
 node.stop()
 
-node.join()
+node.join
+```
