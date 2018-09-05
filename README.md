@@ -1,5 +1,5 @@
 # python-p2p-network
-Basic peer-to-peer TCP/IP network node to implement decentralized peer-to-peer network applications. Use at your own risk!
+Basic peer-to-peer TCP/IP network node to implement decentralized peer-to-peer network applications. Use at your own risk! Created for my students following the Avans Minor MAD - Blockchain course.
 
 ## Description
 TcpServerNode creates a TCP/IP server on the port you have given. It accepts incoming nodes and put these into its  
