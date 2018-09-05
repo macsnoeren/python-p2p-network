@@ -96,7 +96,6 @@ class Node(threading.Thread):
     # data is a python variabele which is converted to JSON that is send over to the other node.
     # exclude list gives all the nodes to which this data should not be sent.
     def send2nodes(self, data, exclude = []):
-        #self.deleteClosedConnections()
         for n in self.nodesIn:
             if n in exclude:
                 print("TcpServer.send2nodes: Excluding node in sending the message")
@@ -112,7 +111,7 @@ class Node(threading.Thread):
     # Send the data to the node n if it exists.
     # data is a python variabele which is converted to JSON that is send over to the other node.
     def send2node(self, n, data):
-        #self.deleteClosedConnections()
+        self.deleteClosedConnections()
         if n in self.nodesIn or n in self.nodesOut:
             try:
                 n.send(data)
