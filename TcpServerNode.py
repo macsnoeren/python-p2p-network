@@ -29,6 +29,8 @@ import hashlib
 # Implements a node that is able to connect to other nodes and is able to accept connections from other nodes.
 # After instantiation, the node creates a TCP/IP server with the given port.
 #
+
+
 class Node(threading.Thread):
 
     # Python class constructor
@@ -39,29 +41,29 @@ class Node(threading.Thread):
         self.terminate_flag = threading.Event()
 
         # Server details, host (or ip) to bind to and the port
-        self.host           = host
-        self.port           = port
+        self.host = host
+        self.port = port
 
         # Events are send back to the given callback
-        self.callback       = callback
+        self.callback = callback
 
         # Nodes that have established a connection with this node
-        self.nodesIn        = [] # Nodes that are connect with us N->(US)->N
+        self.nodesIn = []  # Nodes that are connect with us N->(US)->N
 
         # Nodes that this nodes is connected to
-        self.nodesOut       = [] # Nodes that we are connected to (US)->N
+        self.nodesOut = []  # Nodes that we are connected to (US)->N
 
         # Create a unique ID for each node.
         id = hashlib.md5()
-        t = self.host + str(self.port) + str(random.randint(1, 99999999));
+        t = self.host + str(self.port) + str(random.randint(1, 99999999))
         id.update(t.encode('ascii'))
         self.id = id.hexdigest()
 
         # Start the TCP/IP server
-        self.initServer()
+        self.init_server()
 
     # Creates the TCP/IP socket and bind is to the ip and port
-    def initServer(self):
+    def init_server(self):
         print("Initialisation of the TcpServer on port: " + str(self.port) + " on node (" + self.id + ")")
 
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -71,7 +73,7 @@ class Node(threading.Thread):
 
     # Print the nodes with this node is connected to. It makes two lists. One for the nodes that have established
     # a connection with this node and one for the node that this node has made connection with.
-    def printConnections(self):
+    def print_connections(self):
         print("Connection status:")
         print("- Total nodes connected with us: %d" % len(self.nodesIn))
         print("- Total nodes connected to     : %d" % len(self.nodesOut))
@@ -79,7 +81,7 @@ class Node(threading.Thread):
     # Misleading function name, while this function checks whether the connected nodes have been terminated
     # by the other host. If so, clean the array list of the nodes.
     # When a connection is closed, an event is send NODEINBOUNDCLOSED or NODEOUTBOUNDCLOSED
-    def deleteClosedConnections(self):
+    def delete_closed_connections(self):
         for n in self.nodesIn:
             if n.terminate_flag.is_set():
                 self.callback("NODEINBOUNDCLOSED", self, n, {})
@@ -95,23 +97,23 @@ class Node(threading.Thread):
     # Send a message to all the nodes that are connected with this node.
     # data is a python variabele which is converted to JSON that is send over to the other node.
     # exclude list gives all the nodes to which this data should not be sent.
-    def send2nodes(self, data, exclude = []):
+    def send_to_nodes(self, data, exclude = []):
         for n in self.nodesIn:
             if n in exclude:
                 print("TcpServer.send2nodes: Excluding node in sending the message")
             else:
-                self.send2node(n, data)
+                self.send_to_node(n, data)
 
         for n in self.nodesOut:
             if n in exclude:
                 print("TcpServer.send2nodes: Excluding node in sending the message")
             else:
-                self.send2node(n, data)
+                self.send_to_node(n, data)
 
     # Send the data to the node n if it exists.
     # data is a python variabele which is converted to JSON that is send over to the other node.
-    def send2node(self, n, data):
-        self.deleteClosedConnections()
+    def send_to_node(self, n, data):
+        self.delete_closed_connections()
         if n in self.nodesIn or n in self.nodesOut:
             try:
                 n.send(data)
@@ -122,23 +124,23 @@ class Node(threading.Thread):
 
     # Make a connection with another node that is running on host with port.
     # When the connection is made, an event is triggered CONNECTEDWITHNODE.
-    def connectWithNode(self, host, port):
+    def connect_with_node(self, host, port):
         try:
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             print("connecting to %s port %s" % (host, port))
             sock.connect((host, port))
 
-            threadClient = NodeConnection(self, sock, (host, port), self.callback)
-            threadClient.start()
-            self.nodesOut.append(threadClient)
-            self.callback("CONNECTEDWITHNODE", self, threadClient, {})
-            self.printConnections()
+            thread_client = NodeConnection(self, sock, (host, port), self.callback)
+            thread_client.start()
+            self.nodesOut.append(thread_client)
+            self.callback("CONNECTEDWITHNODE", self, thread_client, {})
+            self.print_connections()
 
         except:
-            print("TcpServer.connectWithNode: Could not connect with node.")
+            print("TcpServer.connect_with_node: Could not connect with node.")
 
     # Disconnect with a node. It sends a last message to the node!
-    def disconnectWithNode(self, node):
+    def disconnect_with_node(self, node):
         if node in self.nodesOut:
             node.stop()
             node.send({"type": "message", "message": "Terminate connection"})
@@ -152,15 +154,15 @@ class Node(threading.Thread):
     # This method is required for the Thead function and is called when it is started.
     # This function implements the main loop of this thread.
     def run(self):
-        while not self.terminate_flag.is_set(): # Check whether the thread needs to be closed
+        while not self.terminate_flag.is_set():  # Check whether the thread needs to be closed
             try:
                 print("Wait for connection")
                 connection, client_address = self.sock.accept()
-                threadClient = NodeConnection(self, connection, client_address, self.callback)
-                threadClient.start()
-                self.nodesIn.append(threadClient)
+                thread_client = NodeConnection(self, connection, client_address, self.callback)
+                thread_client.start()
+                self.nodesIn.append(thread_client)
 
-                self.callback("NODECONNECTED", self, threadClient, {})
+                self.callback("NODECONNECTED", self, thread_client, {})
 
             except socket.timeout:
                 pass
@@ -197,22 +199,24 @@ class Node(threading.Thread):
 # Both inbound and outbound nodes are created with this class.
 # Events are send when data is coming from the node
 # Messages could be sent to this node.
+
+
 class NodeConnection(threading.Thread):
 
     # Python constructor
     def __init__(self, nodeServer, sock, clientAddress, callback):
         super(NodeConnection, self).__init__()
 
-        self.host           = clientAddress[0]
-        self.port           = clientAddress[1]
-        self.nodeServer     = nodeServer;
-        self.sock           = sock
-        self.clientAddress  = clientAddress
-        self.callback       = callback
+        self.host = clientAddress[0]
+        self.port = clientAddress[1]
+        self.nodeServer = nodeServer
+        self.sock = sock
+        self.clientAddress = clientAddress
+        self.callback = callback
         self.terminate_flag = threading.Event()
 
         id = hashlib.md5()
-        t = self.host + str(self.port) + str(random.randint(1, 99999999));
+        t = self.host + str(self.port) + str(random.randint(1, 99999999))
         id.update(t.encode('ascii'))
         self.id = id.hexdigest()
 
@@ -279,7 +283,7 @@ class NodeConnection(threading.Thread):
 #
 # node.start()
 #
-# node.connectWithNode('12.34.56.78', 20000)
+# node.connect_with_node('12.34.56.78', 20000)
 #
 # server.terminate_flag.set() # Stopping the thread
 #
