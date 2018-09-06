@@ -9,7 +9,6 @@
 
 import time
 import pprint
-
 from TcpServerNode import Node
 
 node1 = None
