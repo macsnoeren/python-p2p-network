@@ -10,18 +10,18 @@ decentralized peer-to-peer network. This class is at you disposal to use within 
 development.                                                                                                        
 
 ## New node
-n = Node(host, port, callbackNodeEvent)
+n = Node(host, port, callback_node_event)
 
-Example: n = Node('localhost', 10000, callbackNodeEvent)
+Example: n = Node('localhost', 10000, callback_node_event)
 
 Creates a node on port 1000 and sends all the events to the function callbackNodeEvent.
 
 ## Connecting with other nodes
 To become part of the p2p network, it is required to connect to some other nodes that already form the network.
 
-node.connectWithNode(ip/host, port)
+node.connect_with_node(ip/host, port)
 
-Example: node.connectWithNode(11.22.33.44, 20000)
+Example: node.connect_with_node(11.22.33.44, 20000)
 
 ## Callback function to capture events
 def callbackNodeEvent(event, node, other, data):
@@ -43,24 +43,24 @@ from TcpServerNode import Node
 
 node = None # global variable
 
-def callbackNodeEvent(event, node, other, data):
+def callback_node_event(event, node, other, data):
    print("Event Node 1 (" + node.id + "): %s: %s" % (event, data))
-   node.send2nodes({"thank": "you"})
+   node.send_to_nodes({"thank": "you"})
 
-node = Node('localhost', 10000, callbackNodeEvent)
+node = Node('localhost', 10000, callback_node_event)
 
 node.start()
 
-node.connectWithNode('12.34.56.78', 20000)
+node.connect_with_node('12.34.56.78', 20000)
 
-server.terminate_flag.set() # Stopping the thread
+node.terminate_flag.set() # Stopping the thread
 
-node.send2nodes({"type": "message", "message": "test"})
+node.send_to_nodes({"type": "message", "message": "test"})
 
-while ( 1 ):
+while True:
    time.sleep(1)
 
 node.stop()
 
-node.join
+node.join()
 ```
