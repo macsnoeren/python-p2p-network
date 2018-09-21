@@ -20,6 +20,7 @@ import threading
 import pprint
 import random
 import hashlib
+import re
 
 #######################################################################################################################
 # TCPServer Class #####################################################################################################
@@ -29,8 +30,6 @@ import hashlib
 # Implements a node that is able to connect to other nodes and is able to accept connections from other nodes.
 # After instantiation, the node creates a TCP/IP server with the given port.
 #
-
-
 class Node(threading.Thread):
 
     # Python class constructor
@@ -95,7 +94,7 @@ class Node(threading.Thread):
                 del self.nodesOut[self.nodesIn.index(n)]
 
     # Send a message to all the nodes that are connected with this node.
-    # data is a python variabele which is converted to JSON that is send over to the other node.
+    # data is a python variable which is converted to JSON that is send over to the other node.
     # exclude list gives all the nodes to which this data should not be sent.
     def send_to_nodes(self, data, exclude = []):
         for n in self.nodesIn:
@@ -215,6 +214,9 @@ class NodeConnection(threading.Thread):
         self.callback = callback
         self.terminate_flag = threading.Event()
 
+        # Variable for parsing the incoming json messages
+        self.buffer = ""
+
         id = hashlib.md5()
         t = self.host + str(self.port) + str(random.randint(1, 99999999))
         id.update(t.encode('ascii'))
@@ -226,7 +228,9 @@ class NodeConnection(threading.Thread):
     # This data is converted into json and send.
     def send(self, data):
         try:
-            self.sock.sendall(json.dumps(data, separators=(',', ':')).encode('ascii'))
+            message = json.dumps(data, separators=(',', ':')) + "-TSN";
+            #self.sock.sendall(json.dumps(data, separators=(',', ':')).encode('ascii'))
+            self.sock.sendall(message.encode('utf-8'))
 
         except:
             print("NodeConnection.send: Unexpected error:", sys.exc_info()[0])
@@ -245,7 +249,7 @@ class NodeConnection(threading.Thread):
         while not self.terminate_flag.is_set(): # Check whether the thread needs to be closed
             line = ""
             try:
-                line = self.sock.recv(4096)
+                line = self.sock.recv(4096) # the line ends with -TSN\n
 
             except socket.timeout:
                 pass
@@ -255,17 +259,28 @@ class NodeConnection(threading.Thread):
                 print("NodeConnection: Socket has been terminated (%s)" % line)
 
             if line != "":
-                try:
-                    obj = json.loads(line)
-                    self.callback("NODEMESSAGE", self.nodeServer, self, obj)
-                except:
-                    print("NodeConnection: Data could not be parsed (%s)" % line)
+                self.buffer += str(line.decode('utf-8'))
+
+                # Get the messages
+                index = self.buffer.find("-TSN")
+                while ( index > 0 ):
+                    message = self.buffer[0:index]
+                    self.buffer = self.buffer[index+4::]
+                    index = self.buffer.find("-TSN")
+                    try:
+                        obj = json.loads(message)
+                        self.callback("NODEMESSAGE", self.nodeServer, self, obj)
+                    except:
+                        print("NodeConnection: Data could not be parsed (%s)" % line)
 
             time.sleep(0.01)
 
         self.sock.settimeout(None)
         self.sock.close()
         print("NodeConnection: Stopped")
+
+    def get_message(self):
+        print("TESTING")
 
 #######################################################################################################################
 # Example usage of Node ###############################################################################################
