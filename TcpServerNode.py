@@ -216,6 +216,7 @@ class NodeConnection(threading.Thread):
 
         # Variable for parsing the incoming json messages
         self.buffer = ""
+        self.message_count = 0;
 
         id = hashlib.md5()
         t = self.host + str(self.port) + str(random.randint(1, 99999999))
@@ -227,14 +228,18 @@ class NodeConnection(threading.Thread):
     # Send data to the node. The data should be a python variabele
     # This data is converted into json and send.
     def send(self, data):
+        self.message_count = self.message_count + 1
+        data['_mc'] = self.message_count
         try:
             message = json.dumps(data, separators=(',', ':')) + "-TSN";
-            #self.sock.sendall(json.dumps(data, separators=(',', ':')).encode('ascii'))
             self.sock.sendall(message.encode('utf-8'))
 
         except:
             print("NodeConnection.send: Unexpected error:", sys.exc_info()[0])
             self.terminate_flag.set()
+
+    def get_message_count(self):
+        return self.message_count
 
     # Stop the node client. Please make sure you join the thread.
     def stop(self):
