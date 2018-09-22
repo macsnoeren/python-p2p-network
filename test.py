@@ -33,9 +33,13 @@ def callback_node_event(event, node, other, data):
     else:
         print("NODE (" + node.getName() + "): Event is not known " + event + "\n")
 
-node1 = Node('localhost', 10000, callback_node_event)
-node2 = Node('localhost', 20000, callback_node_event)
-node3 = Node('localhost', 30000, callback_node_event)
+#node1 = Node('localhost', 10000, callback_node_event)
+#node2 = Node('localhost', 20000, callback_node_event)
+#node3 = Node('localhost', 30000, callback_node_event)
+
+node1 = Node('localhost', 10000, None)
+node2 = Node('localhost', 20000, None)
+node3 = Node('localhost', 30000, None)
 
 node1.start()
 node2.start()
