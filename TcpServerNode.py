@@ -83,13 +83,21 @@ class Node(threading.Thread):
     def delete_closed_connections(self):
         for n in self.nodesIn:
             if n.terminate_flag.is_set():
-                self.callback("NODEINBOUNDCLOSED", self, n, {})
+                self.event_node_inbound_closed(n)
+
+                if ( self.callback != None ):
+                    self.callback("NODEINBOUNDCLOSED", self, n, {})
+
                 n.join()
                 del self.nodesIn[self.nodesIn.index(n)]
 
         for n in self.nodesOut:
             if n.terminate_flag.is_set():
-                self.callback("NODEOUTBOUNDCLOSED", self, n, {})
+                self.event_node_outbound_closed(n)
+
+                if ( self.callback != None ):
+                    self.callback("NODEOUTBOUNDCLOSED", self, n, {})
+
                 n.join()
                 del self.nodesOut[self.nodesIn.index(n)]
 
@@ -132,7 +140,11 @@ class Node(threading.Thread):
             thread_client = NodeConnection(self, sock, (host, port), self.callback)
             thread_client.start()
             self.nodesOut.append(thread_client)
-            self.callback("CONNECTEDWITHNODE", self, thread_client, {})
+            self.event_connected_with_node(thread_client)
+
+            if (self.callback != None):
+                self.callback("CONNECTEDWITHNODE", self, thread_client, {})
+
             self.print_connections()
 
         except:
@@ -161,8 +173,10 @@ class Node(threading.Thread):
                 thread_client.start()
                 self.nodesIn.append(thread_client)
 
-                self.callback("NODECONNECTED", self, thread_client, {})
+                self.event_node_connected(thread_client)
 
+                if ( self.callback != None ):
+                    self.callback("NODECONNECTED", self, thread_client, {})
             except socket.timeout:
                 pass
 
@@ -189,6 +203,25 @@ class Node(threading.Thread):
         self.sock.close()
         print("TcpServer stopped")
 
+    # Started to implement the events, so this class can be extended with a better class
+    # In the event a callback can be called!
+
+    # node is the node thread that is running to get information and send information to.
+    def event_node_connected(self, node):
+        print("event_node_connected: " + node.getName())
+
+    def event_connected_with_node(self, node):
+        print("event_node_connected: " + node.getName())
+
+    def event_node_inbound_closed(self, node):
+        print("event_node_inbound_closed: " + node.getName())
+
+    def event_node_outbound_closed(self, node):
+        print("event_node_outbound_closed: " + node.getName())
+
+    def event_node_message(self, node, data):
+        print("event_node_message: " + node.getName() + ": " + str(data))
+
 #######################################################################################################################
 # NodeConnection Class ###############################################################################################
 #######################################################################################################################
@@ -198,8 +231,6 @@ class Node(threading.Thread):
 # Both inbound and outbound nodes are created with this class.
 # Events are send when data is coming from the node
 # Messages could be sent to this node.
-
-
 class NodeConnection(threading.Thread):
 
     # Python constructor
@@ -216,7 +247,8 @@ class NodeConnection(threading.Thread):
 
         # Variable for parsing the incoming json messages
         self.buffer = ""
-        self.message_count = 0;
+        self.message_count_send = 0;
+        self.message_count_recv = 0;
 
         id = hashlib.md5()
         t = self.host + str(self.port) + str(random.randint(1, 99999999))
@@ -228,8 +260,10 @@ class NodeConnection(threading.Thread):
     # Send data to the node. The data should be a python variabele
     # This data is converted into json and send.
     def send(self, data):
-        self.message_count = self.message_count + 1
-        data['_mc'] = self.message_count
+        self.message_count_send = self.message_count_send + 1
+        data['_mcs'] = self.message_count_send
+        data['_mcr'] = self.get_message_count_recv()
+
         try:
             message = json.dumps(data, separators=(',', ':')) + "-TSN";
             self.sock.sendall(message.encode('utf-8'))
@@ -238,8 +272,14 @@ class NodeConnection(threading.Thread):
             print("NodeConnection.send: Unexpected error:", sys.exc_info()[0])
             self.terminate_flag.set()
 
-    def get_message_count(self):
-        return self.message_count
+    def get_message_count_send(self):
+        return self.message_count_send
+
+    def get_message_count_recv(self):
+        return self.message_count_recv
+
+    def get_id(self):
+        return self.id
 
     # Stop the node client. Please make sure you join the thread.
     def stop(self):
@@ -273,8 +313,16 @@ class NodeConnection(threading.Thread):
                     self.buffer = self.buffer[index+4::]
                     index = self.buffer.find("-TSN")
                     try:
-                        obj = json.loads(message)
-                        self.callback("NODEMESSAGE", self.nodeServer, self, obj)
+                        data = json.loads(message)
+                        self.message_count_recv = self.message_count_recv + 1;
+                        data['_mcr'] = self.message_count_recv
+                        data['_mcs'] = self.get_message_count_send()
+
+                        self.nodeServer.event_node_message(self, data)
+
+                        if (self.callback != None):
+                            self.callback("NODEMESSAGE", self.nodeServer, self, data)
+
                     except:
                         print("NodeConnection: Data could not be parsed (%s)" % line)
 
