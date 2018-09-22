@@ -48,8 +48,7 @@ class AvansNode (TcpServerNode.Node):
                          'amount': amount
                         })
 
-    
-
+    # Maybe add a hash at sending? When receiving check the hash and use it for check if your already had it.
     def send_data(self, type, data):
         data['_type'] = type
         self.send_to_nodes(data)

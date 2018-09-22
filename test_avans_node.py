@@ -37,9 +37,13 @@ time.sleep(5)
 
 node_p2p1.send_transacation("Maurice", "Diederich", 1000)
 
-
-while True:
-    time.sleep(1)
+#while True:
+time.sleep(1)
 
 print("main stopped")
+
+node_p2p1.stop()
+node_p2p2.stop()
+node_p2p3.stop()
+node_p2p4.stop()
 

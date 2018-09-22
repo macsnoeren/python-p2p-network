@@ -69,7 +69,6 @@ while True:
 
 node.stop()
 
-node.join()
 ```
 
 ###MyPeer2PeerNode.py
@@ -145,8 +144,12 @@ time.sleep(5)
 # to their connected nodes.
 node_p2p1.send_transacation("Maurice", "Diederich", 1000)
 
-while True:
-    time.sleep(1)
+time.sleep(10)
+
+node_p2p1.stop()
+node_p2p2.stop()
+node_p2p3.stop()
+node_p2p4.stop()
 
 print("main stopped")
 ````
