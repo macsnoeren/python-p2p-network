@@ -9,25 +9,8 @@
 
 import time
 import pprint
+
 from TcpServerNode import Node
-from MyPeer2PeerNode import MyPeer2PeerNode
-
-node_p2p1 = MyPeer2PeerNode('localhost', 4000)
-node_p2p1.start()
-
-node_p2p2 = MyPeer2PeerNode('localhost', 5000)
-node_p2p2.start()
-
-node_p2p2.connect_with_node('localhost', 4000)
-
-node_p2p1.send_to_nodes({"message": "Hoi daar"})
-
-node_p2p2.send_transacation("Maurice", "Diederich", 1000)
-
-time.sleep(20)
-
-
-exit(0)
 
 node1 = None
 node2 = None

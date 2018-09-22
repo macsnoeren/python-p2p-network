@@ -4,6 +4,7 @@
 # Author: Maurice Snoeren                                                                                             #
 # Version: 0.1 beta (use at your own risk)                                                                            #
 #                                                                                                                     #
+# TcpServerNode implements a peer-to-peer network node based on tcp/ip sockets.                                       #
 # TcpServerNode creates a TCP/IP server on the port you have given. It accepts incoming nodes and put these into its  #
 # internal datastructure. When nodes disconnect, the nodes are removed. Events are generated when nodes are connected #
 # , when nodes leave and when nodes have data. Furthermore, this class is able to connect to other nodes. Sending     #
@@ -167,7 +168,7 @@ class Node(threading.Thread):
     def run(self):
         while not self.terminate_flag.is_set():  # Check whether the thread needs to be closed
             try:
-                print("Wait for connection")
+                print("TcpServerNode: Wait for incoming connection")
                 connection, client_address = self.sock.accept()
                 thread_client = NodeConnection(self, connection, client_address, self.callback)
                 thread_client.start()
@@ -304,7 +305,10 @@ class NodeConnection(threading.Thread):
                 print("NodeConnection: Socket has been terminated (%s)" % line)
 
             if line != "":
-                self.buffer += str(line.decode('utf-8'))
+                try:
+                    self.buffer += str(line.decode('utf-8'))
+                except:
+                    print("NodeConnection: Decoding line error")
 
                 # Get the messages
                 index = self.buffer.find("-TSN")
