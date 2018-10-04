@@ -18,10 +18,8 @@ import sys
 import json
 import time
 import threading
-import pprint
 import random
 import hashlib
-import re
 
 #######################################################################################################################
 # TCPServer Class #####################################################################################################
@@ -78,6 +76,21 @@ class Node(threading.Thread):
         print("- Total nodes connected with us: %d" % len(self.nodesIn))
         print("- Total nodes connected to     : %d" % len(self.nodesOut))
 
+    def get_inbound_nodes(self):
+        return self.nodesIn
+
+    def get_outbound_nodes(self):
+        return self.nodesOut
+
+    def get_id(self):
+        return self.id
+
+    def get_host(self):
+        return self.host
+
+    def get_port(self):
+        return self.port
+
     # Misleading function name, while this function checks whether the connected nodes have been terminated
     # by the other host. If so, clean the array list of the nodes.
     # When a connection is closed, an event is send NODEINBOUNDCLOSED or NODEOUTBOUNDCLOSED
@@ -125,7 +138,8 @@ class Node(threading.Thread):
         if n in self.nodesIn or n in self.nodesOut:
             try:
                 n.send(data)
-            except:
+            except Exception as e:
+                print(str(e))
                 print("TcpServer.send2node: Error while sending data to the node");
         else:
             print("TcpServer.send2node: Could not send the data, node is not found!")
@@ -163,6 +177,10 @@ class Node(threading.Thread):
     def stop(self):
         self.terminate_flag.set()
 
+    # This method can be overrided when a different nodeconnection is required!
+    def create_new_connection(self, connection, client_address, callback):
+        return NodeConnection(self, connection, client_address, callback)
+
     # This method is required for the Thead function and is called when it is started.
     # This function implements the main loop of this thread.
     def run(self):
@@ -170,7 +188,7 @@ class Node(threading.Thread):
             try:
                 print("TcpServerNode: Wait for incoming connection")
                 connection, client_address = self.sock.accept()
-                thread_client = NodeConnection(self, connection, client_address, self.callback)
+                thread_client = self.create_new_connection(connection, client_address, self.callback)
                 thread_client.start()
                 self.nodesIn.append(thread_client)
 
@@ -258,12 +276,24 @@ class NodeConnection(threading.Thread):
 
         print("NodeConnection.send: Started with client (" + self.id + ") '" + self.host + ":" + str(self.port) + "'")
 
-    # Send data to the node. The data should be a python variabele
-    # This data is converted into json and send.
-    def send(self, data):
+    def get_host(self):
+        return self.host
+
+    def get_port(self):
+        return self.port
+
+    def create_message(self, data):
         self.message_count_send = self.message_count_send + 1
         data['_mcs'] = self.message_count_send
         data['_mcr'] = self.get_message_count_recv()
+
+        return data;
+
+    # Send data to the node. The data should be a python variabele
+    # This data is converted into json and send.
+    def send(self, data):
+        data = self.create_message(data)
+        print("NODE MES: " + str(data))
 
         try:
             message = json.dumps(data, separators=(',', ':')) + "-TSN";
@@ -315,7 +345,7 @@ class NodeConnection(threading.Thread):
                 while ( index > 0 ):
                     message = self.buffer[0:index]
                     self.buffer = self.buffer[index+4::]
-                    index = self.buffer.find("-TSN")
+
                     try:
                         data = json.loads(message)
                         self.message_count_recv = self.message_count_recv + 1;
@@ -327,17 +357,17 @@ class NodeConnection(threading.Thread):
                         if (self.callback != None):
                             self.callback("NODEMESSAGE", self.nodeServer, self, data)
 
-                    except:
+                    except Exception as e:
+                        print(str(e))
                         print("NodeConnection: Data could not be parsed (%s)" % line)
+
+                    index = self.buffer.find("-TSN")
 
             time.sleep(0.01)
 
         self.sock.settimeout(None)
         self.sock.close()
         print("NodeConnection: Stopped")
-
-    def get_message(self):
-        print("TESTING")
 
 #######################################################################################################################
 # Example usage of Node ###############################################################################################
