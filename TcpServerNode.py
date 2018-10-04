@@ -186,7 +186,7 @@ class Node(threading.Thread):
     def run(self):
         while not self.terminate_flag.is_set():  # Check whether the thread needs to be closed
             try:
-                print("TcpServerNode: Wait for incoming connection")
+                #print("TcpServerNode: Wait for incoming connection")
                 connection, client_address = self.sock.accept()
                 thread_client = self.create_new_connection(connection, client_address, self.callback)
                 thread_client.start()
@@ -289,7 +289,7 @@ class NodeConnection(threading.Thread):
 
         return data;
 
-    # Send data to the node. The data should be a python variabele
+    # Send data to the node. The data should be a python variable
     # This data is converted into json and send.
     def send(self, data):
         data = self.create_message(data)
@@ -308,6 +308,9 @@ class NodeConnection(threading.Thread):
 
     def get_message_count_recv(self):
         return self.message_count_recv
+
+    def check_message(self, data):
+        return True
 
     def get_id(self):
         return self.id
@@ -348,11 +351,15 @@ class NodeConnection(threading.Thread):
 
                     try:
                         data = json.loads(message)
-                        self.message_count_recv = self.message_count_recv + 1;
-                        data['_mcr'] = self.message_count_recv
-                        data['_mcs'] = self.get_message_count_send()
+                        if ( self.check_message(data) ):
+                            self.message_count_recv = self.message_count_recv + 1
+                            # Why this? While is does not make any sense?
+                            #data['_mcr'] = self.message_count_recv
+                            #data['_mcs'] = self.get_message_count_send()
 
-                        self.nodeServer.event_node_message(self, data)
+                            self.nodeServer.event_node_message(self, data)
+                        else:
+                            print("Check messages failed!");
 
                         if (self.callback != None):
                             self.callback("NODEMESSAGE", self.nodeServer, self, data)
