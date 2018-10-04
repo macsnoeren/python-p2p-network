@@ -138,9 +138,9 @@ class Node(threading.Thread):
         if n in self.nodesIn or n in self.nodesOut:
             try:
                 n.send(data)
+                
             except Exception as e:
-                print(str(e))
-                print("TcpServer.send2node: Error while sending data to the node");
+                print("TcpServer.send2node: Error while sending data to the node (" + str(e) + ")");
         else:
             print("TcpServer.send2node: Could not send the data, node is not found!")
 
@@ -152,7 +152,8 @@ class Node(threading.Thread):
             print("connecting to %s port %s" % (host, port))
             sock.connect((host, port))
 
-            thread_client = NodeConnection(self, sock, (host, port), self.callback)
+            #thread_client = NodeConnection(self, sock, (host, port), self.callback)
+            thread_client = self.create_new_connection(sock, (host, port), self.callback)
             thread_client.start()
             self.nodesOut.append(thread_client)
             self.event_connected_with_node(thread_client)
@@ -162,8 +163,8 @@ class Node(threading.Thread):
 
             self.print_connections()
 
-        except:
-            print("TcpServer.connect_with_node: Could not connect with node.")
+        except Exception as e:
+            print("TcpServer.connect_with_node: Could not connect with node. (" + str(e) + ")")
 
     # Disconnect with a node. It sends a last message to the node!
     def disconnect_with_node(self, node):
@@ -293,7 +294,6 @@ class NodeConnection(threading.Thread):
     # This data is converted into json and send.
     def send(self, data):
         data = self.create_message(data)
-        print("NODE MES: " + str(data))
 
         try:
             message = json.dumps(data, separators=(',', ':')) + "-TSN";
@@ -365,8 +365,8 @@ class NodeConnection(threading.Thread):
                             self.callback("NODEMESSAGE", self.nodeServer, self, data)
 
                     except Exception as e:
-                        print(str(e))
-                        print("NodeConnection: Data could not be parsed (%s)" % line)
+                        #print(str(e))
+                        print("NodeConnection: Data could not be parsed (%s) (%s)" % line, str(e))
 
                     index = self.buffer.find("-TSN")
 

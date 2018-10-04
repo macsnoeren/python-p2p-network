@@ -10,8 +10,10 @@
 
 import time
 import TcpServerNode
-import hashlib
-import rsa
+from Crypto.PublicKey import RSA
+from Crypto.Cipher import PKCS1_v1_5 as PKCS1_v1_5_Cipher
+from Crypto.Signature import PKCS1_v1_5 as PKCS1_v1_5_Signature
+from Crypto.Hash import SHA256, SHA
 from base64 import b64decode, b64encode
 
 #######################################################################################################################
@@ -24,9 +26,7 @@ class AvansNode (TcpServerNode.Node):
     def __init__(self, host, port):
         super(AvansNode, self).__init__(host, port, None)
 
-        (self.pubkey, self.privkey) = rsa.newkeys(1024)
-
-        print( b64encode(self.pubkey))
+        self.rsa_key = RSA.generate(2048)
 
         self.discovery_messages = {}
 
@@ -34,23 +34,47 @@ class AvansNode (TcpServerNode.Node):
 
     def get_hash(self, data):
         message = str(data).replace(" ", "")
-        h = hashlib.new("sha3_256")
+        h = SHA256.new() # SHA2 / 256
         h.update(message.encode("utf-8"))
         return h.hexdigest()
 
     def get_public_key(self):
-        return self.pubkey
+        return self.rsa_key.publickey().exportKey("PEM");
 
-    def sign(self, data):
+    def get_private_key(self):
+        return self.rsa_key.exportKey("PEM");
+
+    def encrypt(self, message, public_key):
+        key = RSA.importKey(public_key)
+        cipher = PKCS1_v1_5_Cipher.new(key)
+        return b64encode( cipher.encrypt(message) )
+
+    def decrypt(self, ciphertext):
+        ciphertext = b64decode( ciphertext )
+        cipher = PKCS1_v1_5_Cipher.new(self.rsa_key)
+        sentinal = "sentinal"
+        return cipher.decrypt(ciphertext, sentinal)
+
+    def sign(self, message):
+        h = SHA.new(message)
+        signer = PKCS1_v1_5_Signature.new(self.rsa_key)
+        return b64encode( signer.sign(h) )
+
+    def sign_data(self, data):
         message = str(data).replace(" ", "")
-        signature = rsa.sign(message.encode("utf-8"), self.privkey, 'SHA-1').hex()
-        return signature
+        return self.sign(message);
 
-    def verify(self, signature, message):
-        try:
-            return rsa.verify( message.encode("utf-8"), bytes.fromhex(signature), self.get_public_key() )
-        except:
-            return False
+    def verify(self, message, public_key, signature):
+        key = RSA.importKey(public_key)
+        signature = b64decode( signature )
+        key = RSA.importKey(public_key)
+        h = SHA.new(message)
+        verifier = PKCS1_v1_5_Signature.new(key)
+        return verifier.verify(h, signature)
+    
+    def verify_data(self, data, public_key, signature):
+        message = str(data).replace(" ", "")
+        return self.verify(message);
 
     # This method can be overrided when a different nodeconnection is required!
     def create_new_connection(self, connection, client_address, callback):
@@ -96,7 +120,8 @@ class AvansNode (TcpServerNode.Node):
 
     # A pong request is only send to the node that has send the ping request
     def send_pong(self, node, timestamp):
-        self.send_to_node(node, {'_type': 'pong', 'timestamp': timestamp, 'timestamp_node': time.time()})
+        #self.send_to_node(node, {'_type': 'pong', 'timestamp': timestamp, 'timestamp_node': time.time()})
+        node.send(node, {'_type': 'pong', 'timestamp': timestamp, 'timestamp_node': time.time()})
 
     # With a ping message, return a pong message to the node
     def ping_message(self, node, data):
@@ -119,10 +144,11 @@ class AvansNode (TcpServerNode.Node):
             nodes.append({'id': n.get_id(), 'ip': n.get_host(), 'port': n.nodeServer.get_port(), 'connection': 'inbound'})
         for n in self.get_outbound_nodes():
             nodes.append({'id': n.get_id(), 'ip': n.get_host(), 'port': n.get_port(), 'connection': 'outbound'})
+        print ("SEND")
+        #self.send_to_node(node, {'id': data['id'], '_type': 'discovery_answer', 'timestamp': data['timestamp'], 'nodes': nodes})
+        node.send({'id': data['id'], '_type': 'discovery_answer', 'timestamp': data['timestamp'], 'nodes': nodes})
 
-        self.send_to_node(node, {'id': data['id'], '_type': 'discovery_answer', 'timestamp': data['timestamp'], 'nodes': nodes})
-
-    # Got a discovery request, send back a discover_anser_message with my details
+    # Got a discovery request, send back a discover_anwser_message with my details
     # and relay it to the other hosts, when I got the answers from them  send it thourgh
     # This means i need to administer these message
     def discovery_message(self, node, data):
@@ -174,6 +200,9 @@ class AvansNodeConnection(TcpServerNode.NodeConnection):
         self.remote_node_public_key = "put here the public key of the remote node, for validation"
         self.remote_node_key = "secure key"
 
+    def check_message(self, data):
+        return True
+
     def create_message(self, data):
         super(AvansNodeConnection, self).create_message(data)
 
@@ -181,8 +210,22 @@ class AvansNodeConnection(TcpServerNode.NodeConnection):
         data['_message_id'] = self.nodeServer.get_hash(data)
         data['_hash'] = self.nodeServer.get_hash(data)
         data['_public_key'] = self.nodeServer.get_public_key()
-        data['_signature'] = self.nodeServer.sign(data)
-
-        print("MESSAGE CREATED: " + str(data))
+        data['_signature'] = self.nodeServer.sign_data(data)
 
         return data;
+
+# EXAMPLE:
+#        ciphertext = self.encrypt("Maurice Snoeren", self.get_public_key())
+#        print("CT: " + ciphertext)
+#
+#        message = self.decrypt(ciphertext)
+#        print("MS: " + message)
+#
+#        signature = self.sign("Maurice Snoeren")
+#        print("SG: " + str(signature))
+#
+#        if ( self.verify(message, self.get_public_key(), signature) ):
+#            print "YES!!"
+#        else:
+#            print "NOOO!"
+
