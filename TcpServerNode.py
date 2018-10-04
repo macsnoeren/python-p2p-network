@@ -329,7 +329,8 @@ class NodeConnection(threading.Thread):
             line = ""
             try:
                 line = self.sock.recv(4096) # the line ends with -TSN\n
-
+                line = line.encode('utf-8');
+                
             except socket.timeout:
                 pass
 
@@ -365,8 +366,8 @@ class NodeConnection(threading.Thread):
                             self.callback("NODEMESSAGE", self.nodeServer, self, data)
 
                     except Exception as e:
+                        print("NodeConnection: Data could not be parsed (%s) (%s)" % (line, str(e)) )
                         #print(str(e))
-                        print("NodeConnection: Data could not be parsed (%s) (%s)" % line, str(e))
 
                     index = self.buffer.find("-TSN")
 

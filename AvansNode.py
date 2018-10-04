@@ -62,6 +62,7 @@ class AvansNode (TcpServerNode.Node):
 
     def sign_data(self, data):
         message = str(data).replace(" ", "")
+        print "SIGN MESSAGE: '" + message + "'"
         return self.sign(message);
 
     def verify(self, message, public_key, signature):
@@ -74,7 +75,8 @@ class AvansNode (TcpServerNode.Node):
     
     def verify_data(self, data, public_key, signature):
         message = str(data).replace(" ", "")
-        return self.verify(message);
+        print "VERIFY MESSAGE: '" + message + "'"
+        return self.verify(message, public_key, signature);
 
     # This method can be overrided when a different nodeconnection is required!
     def create_new_connection(self, connection, client_address, callback):
@@ -144,7 +146,6 @@ class AvansNode (TcpServerNode.Node):
             nodes.append({'id': n.get_id(), 'ip': n.get_host(), 'port': n.nodeServer.get_port(), 'connection': 'inbound'})
         for n in self.get_outbound_nodes():
             nodes.append({'id': n.get_id(), 'ip': n.get_host(), 'port': n.get_port(), 'connection': 'outbound'})
-        print ("SEND")
         #self.send_to_node(node, {'id': data['id'], '_type': 'discovery_answer', 'timestamp': data['timestamp'], 'nodes': nodes})
         node.send({'id': data['id'], '_type': 'discovery_answer', 'timestamp': data['timestamp'], 'nodes': nodes})
 
@@ -171,8 +172,6 @@ class AvansNode (TcpServerNode.Node):
 
             else:
                 print("unknwon state!")
-
-        print("Discovery message: " + str(data))
 
     def send_transacation(self, sender, receiver, amount):
         self.send_data('transaction',
@@ -201,6 +200,22 @@ class AvansNodeConnection(TcpServerNode.NodeConnection):
         self.remote_node_key = "secure key"
 
     def check_message(self, data):
+        signature  = data['_signature']
+        public_key = data['_public_key']
+        hash       = data['_hash']
+        message_id = data['_message_id']
+        timestamp  = data['_timestamp']
+       
+        del data['_signature']
+
+        if ( self.nodeServer.verify_data(data, public_key, signature) ):
+            print "YESS"
+        else:
+            print "NO"
+        
+        print("CHECK MESSAGE: " + str(data))
+
+        
         return True
 
     def create_message(self, data):
