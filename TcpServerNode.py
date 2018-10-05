@@ -352,22 +352,22 @@ class NodeConnection(threading.Thread):
 
                     try:
                         data = json.loads(message)
-                        if ( self.check_message(data) ):
-                            self.message_count_recv = self.message_count_recv + 1
-                            # Why this? While is does not make any sense?
-                            #data['_mcr'] = self.message_count_recv
-                            #data['_mcs'] = self.get_message_count_send()
+                        
+                    except Exception as e:
+                        print("NodeConnection: Data could not be parsed (%s) (%s)" % (line, str(e)) )
 
-                            self.nodeServer.event_node_message(self, data)
-                        else:
-                            print("Check messages failed!");
-
+                    if ( self.check_message(data) ):
+                        # Check if the data is still valid => eg having all the keys
+                        self.message_count_recv = self.message_count_recv + 1
+                        self.nodeServer.event_node_message(self, data)
+                        
                         if (self.callback != None):
                             self.callback("NODEMESSAGE", self.nodeServer, self, data)
 
-                    except Exception as e:
-                        print("NodeConnection: Data could not be parsed (%s) (%s)" % (line, str(e)) )
-                        #print(str(e))
+                    else:
+                        print("Check messages failed!");
+                        
+                            
 
                     index = self.buffer.find("-TSN")
 

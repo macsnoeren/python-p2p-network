@@ -31,11 +31,11 @@ node_p2p1.print_connections()
 
 time.sleep(2)
 
-#node_p2p1.send_transacation("Maurice", "Diederich", 1000)
+node_p2p1.send_transacation("Maurice", "Diederich", 1000)
 node_p2p1.send_discovery_message()
 
 while True:
-    #node_p2p1.send_ping()
+    node_p2p1.send_ping()
     time.sleep(5)
 
 print("main stopped")

@@ -32,9 +32,12 @@ class AvansNode (TcpServerNode.Node):
 
         print("MyPeer2PeerNode: Started")
 
+    # This function makes sure that a complex dict variable (consisting of
+    # other dicts and lists, is converted to a unique string that can be
+    # hashed. Every data object that contains the same values, should result
+    # into the dame unique string.
     def get_data_uniq_string(self, data):
-        uniq = ""
-        
+        uniq = ""        
         if ( isinstance(data, dict) ):
             for key in sorted(data):
                 uniq = uniq + key + self.get_data_uniq_string(data[key]).replace("\n", "-n")
@@ -83,7 +86,6 @@ class AvansNode (TcpServerNode.Node):
         return self.sign(message);
 
     def verify(self, message, public_key, signature):
-        key = RSA.importKey(public_key)
         signature = b64decode( signature )
         key = RSA.importKey(public_key)
         h = SHA.new(message)
@@ -101,6 +103,7 @@ class AvansNode (TcpServerNode.Node):
     # Method override, implement here your own functionality
     def event_node_connected(self, node):
         print("p2p_event_node_connected: " + node.getName())
+        self.send_details(node)
 
     def event_connected_with_node(self, node):
         print("p2p_event_node_connected: " + node.getName())
@@ -119,6 +122,9 @@ class AvansNode (TcpServerNode.Node):
         elif (data['_type'] == 'pong'):
             self.pong_message(node, data)
 
+        elif (data['_type'] == 'node-details'):
+            self.receive_details(node, data)
+
         elif (data['_type'] == 'discovery'):
             self.discovery_message(node, data)
 
@@ -127,6 +133,20 @@ class AvansNode (TcpServerNode.Node):
 
         else:
             print("p2p_event_node_message: message type unknown: " + node.getName() + ": " + str(data))
+
+    #######################################################
+    # GETTING/SENDING NODE DETAILS                        #
+    #######################################################
+
+    def send_details(self, node):
+        node.send({'_type': 'node-details', 'public_key': self.get_public_key(), 'id': self.get_id() })
+
+    def receive_details(self, node, data):
+        print("got node details: " + str(data))
+        node.set_public_key(data['public_key'])
+        if ( node.get_public_key() == "" ):
+            self.send_details(node)
+
 
     #######################################################
     # PING / PONG Message packet                          #
@@ -139,7 +159,7 @@ class AvansNode (TcpServerNode.Node):
     # A pong request is only send to the node that has send the ping request
     def send_pong(self, node, timestamp):
         #self.send_to_node(node, {'_type': 'pong', 'timestamp': timestamp, 'timestamp_node': time.time()})
-        node.send(node, {'_type': 'pong', 'timestamp': timestamp, 'timestamp_node': time.time()})
+        node.send({'_type': 'pong', 'timestamp': timestamp, 'timestamp_node': time.time()})
 
     # With a ping message, return a pong message to the node
     def ping_message(self, node, data):
@@ -162,7 +182,7 @@ class AvansNode (TcpServerNode.Node):
             nodes.append({'id': n.get_id(), 'ip': n.get_host(), 'port': n.nodeServer.get_port(), 'connection': 'inbound'})
         for n in self.get_outbound_nodes():
             nodes.append({'id': n.get_id(), 'ip': n.get_host(), 'port': n.get_port(), 'connection': 'outbound'})
-        #self.send_to_node(node, {'id': data['id'], '_type': 'discovery_answer', 'timestamp': data['timestamp'], 'nodes': nodes})
+
         node.send({'id': data['id'], '_type': 'discovery_answer', 'timestamp': data['timestamp'], 'nodes': nodes})
 
     # Got a discovery request, send back a discover_anwser_message with my details
@@ -196,7 +216,6 @@ class AvansNode (TcpServerNode.Node):
                          'amount': amount
                         })
 
-    # Maybe add a hash at sending? When receiving check the hash and use it for check if your already had it.
     def send_data(self, type, data):
         data['_type'] = type
         self.send_to_nodes(data)
@@ -206,48 +225,63 @@ class AvansNode (TcpServerNode.Node):
     def transaction_message(self, node, data):
         print("Transaction message")
 
+####################################################################################################
+# AvansNodeConnection                                                                              #
+####################################################################################################
+
 class AvansNodeConnection(TcpServerNode.NodeConnection):
 
     # Python constructor
     def __init__(self, nodeServer, sock, clientAddress, callback):
         super(AvansNodeConnection, self).__init__(nodeServer, sock, clientAddress, callback)
 
-        self.remote_node_public_key = "put here the public key of the remote node, for validation"
-        self.remote_node_key = "secure key"
+        # The public key that we have received from the node that we are connected to
+        self.remote_node_public_key = ""
+
+    def set_public_key(self, key):
+        self.remote_node_public_key = key
+
+    def get_public_key(self):
+        return self.remote_node_public_key
 
     def check_message(self, data):
-        print("Checking message:") # Maybe deepcopy the data object
-        
         signature  = data['_signature']
-        public_key = data['_public_key']
+        public_key = data['_public_key']#self.get_public_key()
         hash       = data['_hash']
         message_id = data['_message_id']
         timestamp  = data['_timestamp']
 
+        # Hier BEN IK
+        #if ( 'public_key' in data ):
+        #    public_key = data['_public_key']
+
+        #print("PUBLIC: KEY: " + self.get_public_key()) # Use the public key of the node to check?
         #data['add'] = "asdasd" # Change the message for testing!
 
         # 1. Check the signature!
-        del data['_signature']
-        if ( self.nodeServer.verify_data(data, public_key, signature) ):
-            print("Signature Correct")
-        else:
-            print("Signature NOT correct")
-
-        # 2. Check the hash
         del data['_public_key']
+        del data['_signature']
+        if ( self.nodeServer.verify_data(data, public_key, signature) == False):
+            print("Signature not correct!")
+            return False
+        
+        # 2. Check the hash
         del data['_hash']
-        if ( self.nodeServer.get_hash(data) == hash ):
-            print("Hash is correct!")
-        else:
-            print("Hash in NOT correct")
+        if ( self.nodeServer.get_hash(data) != hash ):
+            print("Hash not correct!")
+            return False
 
         # 3. Check the message id
         del data['_message_id']
-        if ( self.nodeServer.get_hash(data) == message_id ):
-            print("Message ID is correct")
-        else:
-            print("Message ID NOT correct")
-        
+        if ( self.nodeServer.get_hash(data) != message_id ):
+            print("Message ID not correct!")
+            return False
+
+        # 4. Restore the data
+        data['_hash']       = hash
+        data['_message_id'] = message_id
+        data['_timestamp']  = timestamp
+                
         return True
 
     def create_message(self, data):
@@ -256,8 +290,8 @@ class AvansNodeConnection(TcpServerNode.NodeConnection):
         data['_timestamp'] = time.time()
         data['_message_id'] = self.nodeServer.get_hash(data)
         data['_hash'] = self.nodeServer.get_hash(data)
-        data['_public_key'] = self.nodeServer.get_public_key()
         data['_signature'] = self.nodeServer.sign_data(data)
+        data['_public_key'] = self.nodeServer.get_public_key()
 
         return data;
 
