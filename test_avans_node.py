@@ -8,40 +8,40 @@
 #######################################################################################################################
 
 import time
+import sys
+
 from AvansNode import AvansNode
 
-node_p2p1 = AvansNode('localhost', 10000)
-node_p2p2 = AvansNode('localhost', 20000)
-#node_p2p3 = AvansNode('localhost', 30000)
-#node_p2p4 = AvansNode('localhost', 40000)
+# Default configuration
+host = 'localhost'
+port = 10000
 
-node_p2p1.start()
-node_p2p2.start()
-#node_p2p3.start()
-#node_p2p4.start()
+if ( len(sys.argv) > 2 ):
+    host = sys.argv[1]
+    port = int(sys.argv[2])
 
-time.sleep(2)
+print("Starting node on host " + host + " listening on port " + str(port))
 
-# All nodes connect to node 1
-node_p2p2.connect_with_node('localhost', 10000)
-#node_p2p3.connect_with_node('localhost', 40000)
-#node_p2p4.connect_with_node('localhost', 10000)
+node = AvansNode(host, port)
 
-node_p2p1.print_connections()
+node.start()
 
-time.sleep(2)
+time.sleep(1)
 
-node_p2p1.send_transacation("Maurice", "Diederich", 1000)
-node_p2p1.send_discovery_message()
+print("Node started.")
 
-while True:
-    node_p2p1.send_ping()
-    time.sleep(5)
+running = True
+while running:
+    s = raw_input("Please type a command:") # python 2.x
+    if ( s == "stop" ):
+        running = False
+
+    if ( s == "connect"):
+        host = raw_input("host: ")
+        port = int(raw_input("port: "))
+        node.connect_with_node(host, port)
 
 print("main stopped")
 
-node_p2p1.stop()
-node_p2p2.stop()
-#node_p2p3.stop()
-#node_p2p4.stop()
+node.stop()
 

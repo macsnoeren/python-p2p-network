@@ -365,9 +365,12 @@ class NodeConnection(threading.Thread):
                             self.callback("NODEMESSAGE", self.nodeServer, self, data)
 
                     else:
-                        print("Check messages failed!");
-                        
-                            
+                        print("-------------------------------------------")
+                        print("Message is damaged and not correct:\nMESSAGE:")
+                        print(message)
+                        print("DATA:")
+                        print(str(data))
+                        print("-------------------------------------------")
 
                     index = self.buffer.find("-TSN")
 
