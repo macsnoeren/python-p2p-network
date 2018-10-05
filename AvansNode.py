@@ -32,8 +32,26 @@ class AvansNode (TcpServerNode.Node):
 
         print("MyPeer2PeerNode: Started")
 
+    def get_data_uniq_string(self, data):
+        uniq = ""
+        
+        if ( isinstance(data, dict) ):
+            for key in sorted(data):
+                uniq = uniq + key + self.get_data_uniq_string(data[key]).replace("\n", "-n")
+
+        else:
+            if ( isinstance(data, list) ):
+                for element in sorted(data):
+                    uniq = uniq + self.get_data_uniq_string(element).replace("\n", "-n")
+
+            else:
+                uniq =  uniq + str(data).replace("\n", "-n")
+
+        return uniq
+    
     def get_hash(self, data):
-        message = str(data).replace(" ", "")
+        #message = str(data).replace(" ", "")
+        message = self.get_data_uniq_string(data)
         h = SHA256.new() # SHA2 / 256
         h.update(message.encode("utf-8"))
         return h.hexdigest()
@@ -61,8 +79,7 @@ class AvansNode (TcpServerNode.Node):
         return b64encode( signer.sign(h) )
 
     def sign_data(self, data):
-        message = str(data).replace(" ", "")
-        print "SIGN MESSAGE: '" + message + "'"
+        message = self.get_data_uniq_string(data)
         return self.sign(message);
 
     def verify(self, message, public_key, signature):
@@ -74,8 +91,7 @@ class AvansNode (TcpServerNode.Node):
         return verifier.verify(h, signature)
     
     def verify_data(self, data, public_key, signature):
-        message = str(data).replace(" ", "")
-        print "VERIFY MESSAGE: '" + message + "'"
+        message = self.get_data_uniq_string(data)
         return self.verify(message, public_key, signature);
 
     # This method can be overrided when a different nodeconnection is required!
@@ -200,21 +216,37 @@ class AvansNodeConnection(TcpServerNode.NodeConnection):
         self.remote_node_key = "secure key"
 
     def check_message(self, data):
+        print("Checking message:") # Maybe deepcopy the data object
+        
         signature  = data['_signature']
         public_key = data['_public_key']
         hash       = data['_hash']
         message_id = data['_message_id']
         timestamp  = data['_timestamp']
-       
+
+        #data['add'] = "asdasd" # Change the message for testing!
+
+        # 1. Check the signature!
         del data['_signature']
-
         if ( self.nodeServer.verify_data(data, public_key, signature) ):
-            print "YESS"
+            print("Signature Correct")
         else:
-            print "NO"
-        
-        print("CHECK MESSAGE: " + str(data))
+            print("Signature NOT correct")
 
+        # 2. Check the hash
+        del data['_public_key']
+        del data['_hash']
+        if ( self.nodeServer.get_hash(data) == hash ):
+            print("Hash is correct!")
+        else:
+            print("Hash in NOT correct")
+
+        # 3. Check the message id
+        del data['_message_id']
+        if ( self.nodeServer.get_hash(data) == message_id ):
+            print("Message ID is correct")
+        else:
+            print("Message ID NOT correct")
         
         return True
 
