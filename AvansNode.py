@@ -195,12 +195,12 @@ class AvansNode (TcpServerNode.Node):
 
     # A ping request is send to all the nodes that are connected
     def send_ping(self):
-        self.send_data('ping', {'timestamp': time.time()})
+        self.send_data('ping', {'timestamp': time.time(), 'id': self.get_id()})
 
     # A pong request is only send to the node that has send the ping request
     def send_pong(self, node, timestamp):
         #self.send_to_node(node, {'_type': 'pong', 'timestamp': timestamp, 'timestamp_node': time.time()})
-        node.send({'_type': 'pong', 'timestamp': timestamp, 'timestamp_node': time.time()})
+        node.send({'_type': 'pong', 'timestamp': timestamp, 'timestamp_node': time.time(), 'id': self.get_id()})
 
     # With a ping message, return a pong message to the node
     def received_ping(self, node, data):
@@ -214,10 +214,10 @@ class AvansNode (TcpServerNode.Node):
     # DISCOVERY                                           #
     #######################################################
 
-    def send_discovery_message(self):
+    def send_discovery(self):
         self.send_data('discovery', { 'id': self.get_id(), 'timestamp': time.time() })
 
-    def send_discovery_answer_message(self, node, data):
+    def send_discovery_answer(self, node, data):
         nodes = []
         for n in self.get_inbound_nodes():
             nodes.append({'id': n.get_id(), 'ip': n.get_host(), 'port': n.nodeServer.get_port(), 'connection': 'inbound'})
@@ -237,12 +237,12 @@ class AvansNode (TcpServerNode.Node):
         else:
             print("discovery_message: process message")
             self.discovery_messages[data['id']] = node
-            self.send_discovery_answer_message(node, data)
+            self.send_discovery_answer(node, data)
             self.send_to_nodes({'_type': 'discovery', 'id': data['id'], 'timestamp': data['timestamp']}, [node])
 
     def received_discovery_answer(self, node, data):
         if data['id'] in self.discovery_messages: # needs to be relayed
-            self.send_discovery_answer_message(self.discovery_messages[data['id']], data)
+            self.send_discovery_answer(self.discovery_messages[data['id']], data)
 
         else:
             if ( data['id'] == self.get_id() ):

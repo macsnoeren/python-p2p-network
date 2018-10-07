@@ -60,6 +60,20 @@ class Node(threading.Thread):
         # Start the TCP/IP server
         self.init_server()
 
+        # For visuals!!
+        self.visuals = False
+
+    def enable_visuals(self):
+        self.visuals = True
+        self.udp_server = socket.socket( socket.AF_INET, socket.SOCK_DGRAM )
+        self.send_visuals('{"_type": "new-node", "id": "' + self.id + '", "host": "' +
+                          self.host + '", "port": "' + str(self.port) + '"}') 
+
+    def send_visuals(self, message):
+        if ( self.visuals ):
+            print("Visuals sending: " + message)
+            self.udp_server.sendto(message, ('92.222.168.248', 15000))
+
     # Creates the TCP/IP socket and bind is to the ip and port
     def init_server(self):
         print("Initialisation of the TcpServer on port: " + str(self.port) + " on node (" + self.id + ")")
@@ -275,7 +289,7 @@ class NodeConnection(threading.Thread):
         id.update(t.encode('ascii'))
         self.id = id.hexdigest()
 
-        print("NodeConnection.send: Started with client (" + self.id + ") '" + self.host + ":" + str(self.port) + "'")
+        print("NodeConnection.send: Started with client (" + self.id + ") '" + self.host + ":" + str(self.port) + "'")        
 
     def get_host(self):
         return self.host
@@ -298,6 +312,9 @@ class NodeConnection(threading.Thread):
         try:
             message = json.dumps(data, separators=(',', ':')) + "-TSN";
             self.sock.sendall(message.encode('utf-8'))
+
+            # For visuals!
+            self.nodeServer.send_visuals(message[:-4])
 
         except:
             print("NodeConnection.send: Unexpected error:", sys.exc_info()[0])
