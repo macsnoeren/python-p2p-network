@@ -72,6 +72,8 @@ class Node(threading.Thread):
     def send_visuals(self, type, data):
         if ( self.visuals ):
             data["__id"]        = self.get_id()
+            data["__host"]      = self.host;
+            data["__port"]      = self.port;
             data["__node"]      = type
             data["__timestamp"] = time.time()
             
