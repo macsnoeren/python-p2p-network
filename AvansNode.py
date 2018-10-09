@@ -333,6 +333,7 @@ class AvansNodeConnection(TcpServerNode.NodeConnection):
     def create_message(self, data):
         super(AvansNodeConnection, self).create_message(data)
 
+        data['_id']         = self.nodeServer.get_id()
         data['_timestamp']  = time.time()
         data['_message_id'] = self.nodeServer.get_hash(data)
         data['_hash']       = self.nodeServer.get_hash(data)

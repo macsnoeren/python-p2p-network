@@ -66,11 +66,16 @@ class Node(threading.Thread):
     def enable_visuals(self):
         self.visuals = True
         self.udp_server = socket.socket( socket.AF_INET, socket.SOCK_DGRAM )
-        self.send_visuals('{"_type": "new-node", "id": "' + self.id + '", "host": "' +
-                          self.host + '", "port": "' + str(self.port) + '"}') 
 
-    def send_visuals(self, message):
+        self.send_visuals("node-new", { "host": self.host, "port": self.port })
+
+    def send_visuals(self, type, data):
         if ( self.visuals ):
+            data["__id"]        = self.get_id()
+            data["__node"]      = type
+            data["__timestamp"] = time.time()
+            
+            message = json.dumps(data, separators=(',', ':'));
             print("Visuals sending: " + message)
             self.udp_server.sendto(message, ('92.222.168.248', 15000))
 
@@ -161,6 +166,10 @@ class Node(threading.Thread):
     # Make a connection with another node that is running on host with port.
     # When the connection is made, an event is triggered CONNECTEDWITHNODE.
     def connect_with_node(self, host, port):
+        if ( host == self.host and port == self.port ):
+            print("connect_with_node: Cannot connect with yourself!!")
+            return;
+        
         try:
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             print("connecting to %s port %s" % (host, port))
@@ -209,8 +218,10 @@ class Node(threading.Thread):
 
                 self.event_node_connected(thread_client)
 
+
                 if ( self.callback != None ):
                     self.callback("NODECONNECTED", self, thread_client, {})
+
             except socket.timeout:
                 pass
 
@@ -237,6 +248,9 @@ class Node(threading.Thread):
         self.sock.close()
         print("TcpServer stopped")
 
+        # For visuals!
+        self.send_visuals("node-closed", { "host": self.host, "port": self.port}) 
+
     # Started to implement the events, so this class can be extended with a better class
     # In the event a callback can be called!
 
@@ -244,14 +258,27 @@ class Node(threading.Thread):
     def event_node_connected(self, node):
         print("event_node_connected: " + node.getName())
 
+        # For visuals!
+        self.send_visuals("node-connection-from", { "host": node.host, "port": node.port })
+        
+
     def event_connected_with_node(self, node):
         print("event_node_connected: " + node.getName())
+
+        # For visuals!
+        self.send_visuals("node-connection-to", { "host": node.host, "port": node.port })
 
     def event_node_inbound_closed(self, node):
         print("event_node_inbound_closed: " + node.getName())
 
+        # For visuals!
+        self.send_visuals("node-connection-from-closed", { "host": node.host, "port": node.port })
+
     def event_node_outbound_closed(self, node):
         print("event_node_outbound_closed: " + node.getName())
+
+        # For visuals!
+        self.send_visuals("node-connection-to-closed", { "host": node.host, "port": node.port })
 
     def event_node_message(self, node, data):
         print("event_node_message: " + node.getName() + ": " + str(data))
@@ -314,7 +341,7 @@ class NodeConnection(threading.Thread):
             self.sock.sendall(message.encode('utf-8'))
 
             # For visuals!
-            self.nodeServer.send_visuals(message[:-4])
+            self.nodeServer.send_visuals("node-send", data)
 
         except:
             print("NodeConnection.send: Unexpected error:", sys.exc_info()[0])
@@ -374,12 +401,15 @@ class NodeConnection(threading.Thread):
                         print("NodeConnection: Data could not be parsed (%s) (%s)" % (line, str(e)) )
 
                     if ( self.check_message(data) ):
-                        # Check if the data is still valid => eg having all the keys
                         self.message_count_recv = self.message_count_recv + 1
                         self.nodeServer.event_node_message(self, data)
                         
                         if (self.callback != None):
                             self.callback("NODEMESSAGE", self.nodeServer, self, data)
+
+                        # For visuals!
+                        self.nodeServer.send_visuals("node-receive", data)
+
 
                     else:
                         print("-------------------------------------------")
