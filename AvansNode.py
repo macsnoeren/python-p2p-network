@@ -157,7 +157,7 @@ class AvansNode (TcpServerNode.Node):
     # If a message comes in fro mthe nodes, determine what to do!
     #
     def event_node_message(self, node, data):
-        super(AvansNode, self).event_node_message(node)
+        super(AvansNode, self).event_node_message(node, data)
         
         if (data['_type'] == 'ping'):
             self.received_ping(node, data)
