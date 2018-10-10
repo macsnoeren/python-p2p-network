@@ -15,6 +15,7 @@ from Crypto.Cipher import PKCS1_v1_5 as PKCS1_v1_5_Cipher
 from Crypto.Signature import PKCS1_v1_5 as PKCS1_v1_5_Signature
 from Crypto.Hash import SHA256, SHA
 from base64 import b64decode, b64encode
+import json # kan weg na debugging!
 
 #######################################################################################################################
 # AvansNode ###########################################################################################################
@@ -101,6 +102,14 @@ class AvansNode (TcpServerNode.Node):
     #
     def sign_data(self, data):
         message = self.get_data_uniq_string(data)
+
+        # DEBUG
+        m = json.dumps(data, separators=(',', ':'))
+        print "SEND ------------------------\n"
+        print m
+        print "SHA: " + SHA.new(message).hexdigest()
+        print "------------------------\n"
+        
         return self.sign(message);
 
     # Verify the signature, based on the message, public key and signature.
@@ -116,19 +125,40 @@ class AvansNode (TcpServerNode.Node):
     #
     def verify_data(self, data, public_key, signature):
         message = self.get_data_uniq_string(data)
+
+        # DEBUG
+        m = json.dumps(data, separators=(',', ':'))
+        print "RECEIVE------------------------\n"
+        print m
+        print "SHA: " + SHA.new(message).hexdigest()
+        print "------------------------\n"
+
         return self.verify(message, public_key, signature);
 
     # This method can be overrided when a different nodeconnection is required!
     def create_new_connection(self, connection, client_address, callback):
         return AvansNodeConnection(self, connection, client_address, callback)
 
-    def send_data(self, type, data):
-        data['_type'] = type
-        self.send_to_nodes(data)
-
     ##########################################################
     # Method override, implement here your own functionality #
     ##########################################################    
+
+    def create_message(self, data):
+        # Somehow the data is not always cleaned up!
+        for el in ['_id', '_timestamp', '_message_id', '_hash', '_signature', '_public_key']:
+            if ( el in data ):
+                del data[el]
+                        
+        data = super(AvansNode, self).create_message(data) # Bugfix, never used return variable
+
+        data['_id']         = self.get_id()
+        data['_timestamp']  = time.time()
+        data['_message_id'] = self.get_hash(data)
+        data['_hash']       = self.get_hash(data)
+        data['_signature']  = self.sign_data(data)
+        data['_public_key'] = self.get_public_key()
+
+        return data;
 
     # When a node is connected to us, this event is launched!
     #
@@ -152,7 +182,7 @@ class AvansNode (TcpServerNode.Node):
     #
     def event_node_outbound_closed(self, node):
         super(AvansNode, self).event_node_outbound_closed(node)
-        print("p2p_event_node_outbound_closed: " + node.getName())
+        self.dprint("p2p_event_node_outbound_closed: " + node.getName())
 
     # If a message comes in fro mthe nodes, determine what to do!
     #
@@ -175,14 +205,14 @@ class AvansNode (TcpServerNode.Node):
             self.received_discovery_answer(node, data)
 
         else:
-            print("p2p_event_node_message: message type unknown: " + node.getName() + ": " + str(data))
+            self.dprint("p2p_event_node_message: message type unknown: " + node.getName() + ": " + str(data))
 
     #######################################################
     # GETTING/SENDING NODE DETAILS                        #
     #######################################################
 
     def send_details(self, node):
-        node.send({'_type': 'node-details', 'public_key': self.get_public_key(), 'id': self.get_id() })
+        node.send(self.create_message( {'_type': 'node-details', 'public_key': self.get_public_key(), 'id': self.get_id() } ))
         node.set_public_key_send()
 
     def received_details(self, node, data):
@@ -197,16 +227,15 @@ class AvansNode (TcpServerNode.Node):
 
     # A ping request is send to all the nodes that are connected
     def send_ping(self):
-        self.send_data('ping', {'timestamp': time.time(), 'id': self.get_id()})
+        self.send_to_nodes(self.create_message( {'_type': 'ping', 'timestamp': time.time(), 'id': self.get_id()} ))
 
     # A pong request is only send to the node that has send the ping request
     def send_pong(self, node, timestamp):
-        #self.send_to_node(node, {'_type': 'pong', 'timestamp': timestamp, 'timestamp_node': time.time()})
-        node.send({'_type': 'pong', 'timestamp': timestamp, 'timestamp_node': time.time(), 'id': self.get_id()})
+        node.send(self.create_message( {'_type': 'pong', 'timestamp': timestamp, 'timestamp_node': time.time(), 'id': self.get_id()} ))
 
     # With a ping message, return a pong message to the node
     def received_ping(self, node, data):
-        self.send_pong(node, data['timestamp'])
+        self.send_pong(node, data['timestamp']) # Moet weer aan!
 
     # Got message back based on our ping message, check the latency of the node!
     def received_pong(self, node, data):
@@ -217,7 +246,7 @@ class AvansNode (TcpServerNode.Node):
     #######################################################
 
     def send_discovery(self):
-        self.send_data('discovery', { 'id': self.get_id(), 'timestamp': time.time() })
+        self.send_to_nodes({'_type': 'discovery', 'id': self.get_id(), 'timestamp': time.time() })
 
     def send_discovery_answer(self, node, data):
         nodes = []
@@ -226,7 +255,7 @@ class AvansNode (TcpServerNode.Node):
         for n in self.get_outbound_nodes():
             nodes.append({'id': n.get_id(), 'ip': n.get_host(), 'port': n.get_port(), 'connection': 'outbound'})
 
-        node.send({'id': data['id'], '_type': 'discovery_answer', 'timestamp': data['timestamp'], 'nodes': nodes})
+        node.send(self.create_message( {'id': data['id'], '_type': 'discovery_answer', 'timestamp': data['timestamp'], 'nodes': nodes} ))
 
     # Got a discovery request, send back a discover_anwser_message with my details
     # and relay it to the other hosts, when I got the answers from them  send it thourgh
@@ -234,10 +263,10 @@ class AvansNode (TcpServerNode.Node):
     #
     def received_discovery(self, node, data):
         if data['id'] in self.discovery_messages:
-            print("discovery_message: message already received, so not sending it")
+            self.dprint("discovery_message: message already received, so not sending it")
 
         else:
-            print("discovery_message: process message")
+            self.dprint("discovery_message: process message")
             self.discovery_messages[data['id']] = node
             self.send_discovery_answer(node, data)
             self.send_to_nodes({'_type': 'discovery', 'id': data['id'], 'timestamp': data['timestamp']}, [node])
@@ -248,22 +277,22 @@ class AvansNode (TcpServerNode.Node):
 
         else:
             if ( data['id'] == self.get_id() ):
-                print("discovery_message_answer: This is for me!: " + str(data) + ":" + str(time.time()-data['timestamp']))
+                self.dprint("discovery_message_answer: This is for me!: " + str(data) + ":" + str(time.time()-data['timestamp']))
 
             else:
-                print("unknwon state!")
+                self.dprint("unknwon state!")
 
     # Transations
 
     def send_transacation(self, sender, receiver, amount):
-        self.send_data('transaction',
-                        {'sender': sender,
-                         'receiver': receiver,
-                         'amount': amount
-                        })
+        self.send_to_nodes({'_type': 'transaction',
+                   'sender': sender,
+                   'receiver': receiver,
+                   'amount': amount
+                  })
 
     def transaction_message(self, node, data):
-        print("Transaction message")
+        self.dprint("Transaction message")
 
     ### Implementation messages received!
 
@@ -332,14 +361,3 @@ class AvansNodeConnection(TcpServerNode.NodeConnection):
                 
         return True
 
-    def create_message(self, data):
-        super(AvansNodeConnection, self).create_message(data)
-
-        data['_id']         = self.nodeServer.get_id()
-        data['_timestamp']  = time.time()
-        data['_message_id'] = self.nodeServer.get_hash(data)
-        data['_hash']       = self.nodeServer.get_hash(data)
-        data['_signature']  = self.nodeServer.sign_data(data)
-        data['_public_key'] = self.nodeServer.get_public_key()
-
-        return data;
