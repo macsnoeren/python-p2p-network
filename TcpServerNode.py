@@ -110,7 +110,8 @@ class Node(threading.Thread):
         print("Initialisation of the TcpServer on port: " + str(self.port) + " on node (" + self.id + ")")
 
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.sock.bind((self.host, self.port))
+        #self.sock.bind((self.host, self.port))
+        self.sock.bind(('', self.port))
         self.sock.settimeout(10.0)
         self.sock.listen(1)
 
@@ -225,8 +226,8 @@ class Node(threading.Thread):
     # Disconnect with a node. It sends a last message to the node!
     def disconnect_with_node(self, node):
         if node in self.nodesOut:
-            node.stop()
             node.send(self.create_message( {"type": "message", "message": "Terminate connection"} ))
+            node.stop()
             node.join() # When this is here, the application is waiting and waiting
             del self.nodesOut[self.nodesOut.index(node)]
 

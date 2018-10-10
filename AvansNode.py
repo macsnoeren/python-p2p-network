@@ -104,11 +104,11 @@ class AvansNode (TcpServerNode.Node):
         message = self.get_data_uniq_string(data)
 
         # DEBUG
-        m = json.dumps(data, separators=(',', ':'))
-        print "SEND ------------------------\n"
-        print m
-        print "SHA: " + SHA.new(message).hexdigest()
-        print "------------------------\n"
+        #m = json.dumps(data, separators=(',', ':'))
+        #print "SEND ------------------------\n"
+        #print m
+        #print "SHA: " + SHA.new(message).hexdigest()
+        #print "------------------------\n"
         
         return self.sign(message);
 
@@ -127,11 +127,11 @@ class AvansNode (TcpServerNode.Node):
         message = self.get_data_uniq_string(data)
 
         # DEBUG
-        m = json.dumps(data, separators=(',', ':'))
-        print "RECEIVE------------------------\n"
-        print m
-        print "SHA: " + SHA.new(message).hexdigest()
-        print "------------------------\n"
+        #m = json.dumps(data, separators=(',', ':'))
+        #print "RECEIVE------------------------\n"
+        #print m
+        #print "SHA: " + SHA.new(message).hexdigest()
+        #print "------------------------\n"
 
         return self.verify(message, public_key, signature);
 

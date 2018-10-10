@@ -11,42 +11,55 @@
 
 import time
 import sys
+import random
 
 from AvansNode import AvansNode
 
-node1 = AvansNode('92.222.168.248', 10000)
-node2 = AvansNode('92.222.168.248', 20000)
-node3 = AvansNode('92.222.168.248', 30000)
-node4 = AvansNode('92.222.168.248', 40000)
-node5 = AvansNode('92.222.168.248', 50000)
+total_nodes = 10
 
-node1.enable_visuals()
-node2.enable_visuals()
-node3.enable_visuals()
-node4.enable_visuals()
-node5.enable_visuals()
+if ( len(sys.argv) > 1 ):
+    total_nodes = int( sys.argv[1] )
 
-node1.start()
-node2.start()
-node3.start()
-node4.start()
-node5.start()
+if ( total_nodes < 1 ):
+    total_nodes = 5
+
+print("Creating a network with " + str(total_nodes))
+
+nodes = []
+
+basePort = 20000
+
+print("Creating the network")
+for i in range(total_nodes):
+    node = AvansNode('localhost', basePort + i*100)
+    nodes.append(node)
+    del node
+    
+print("Enable visuals")
+for i in range(total_nodes):
+    nodes[i].enable_visuals()
+    #nodes[i].enable_debug()
 
 time.sleep(1)
 
-node2.connect_with_node('92.222.168.248', 10000)
-node3.connect_with_node('92.222.168.248', 10000)
-node4.connect_with_node('92.222.168.248', 10000)
-node5.connect_with_node('92.222.168.248', 20000)
+print("Starting the nodes")
+for i in range(total_nodes):
+    nodes[i].start()
 
-time.sleep(5)
+time.sleep(1)
+
+print("Making the connections!")
+for i in range(total_nodes):
+    print("Creating connection " + str(i))
+    nodes[i].connect_with_node('localhost', basePort + random.randint(1, total_nodes/5)*100)
+    time.sleep(1)
 
 print("Network started.")
 
-
 running = True
+nodeIndex = 0
 while running:
-    print("Commands: connect, ping, discovery, stop")
+    print("Commands: node, connect, ping, discovery, stop")
     s = raw_input("Please type a command:") # python 2.x
     if ( s == "stop" ):
         running = False
@@ -54,22 +67,24 @@ while running:
     if ( s == "connect"):
         host = raw_input("host: ")
         port = int(raw_input("port: "))
-        node1.connect_with_node(host, port)
+        nodes[nodeIndex].connect_with_node(host, port)
 
     elif ( s == "ping" ):
-        node1.send_ping()
+        nodes[nodeIndex].send_ping()
 
     elif ( s == "discovery" ):
-        node1.send_discovery()
+        nodes[nodeIndex].send_discovery()
+
+    elif ( s == "node" ):
+        nodeIndex = int(raw_input("node port")) - 10000
+        print("Node selected: " + str(nodeIndex))
 
     else:
-        print("Command not understood '" + s + "'")            
+        print("Command not understood '" + s + "'")
+            
 
 print("main stopped")
 
-node1.stop()
-node2.stop()
-node3.stop()
-node4.stop()
-node5.stop()
+for i in range(total_nodes):
+    nodes[i].stop()
 
