@@ -199,17 +199,6 @@ class Node(threading.Thread):
         else:
             self.dprint("TcpServer.send2node: Could not send the data, node is not found!")
 
-    def check_node_connected(self, host, port):
-        for node in self.nodesIn:
-            if ( node.get_host() == host and node.nodeServer.get_port() == port ):
-                return True
-            
-        for node in self.nodesOut:
-            if ( node.get_host() == host and node.get_port() == port ):
-                return True
-        
-        return False
-
     # Make a connection with another node that is running on host with port.
     # When the connection is made, an event is triggered CONNECTEDWITHNODE.
     def connect_with_node(self, host, port):
@@ -218,9 +207,11 @@ class Node(threading.Thread):
             print("connect_with_node: Cannot connect with yourself!!")
             return;
 
-        if ( self.check_node_connected(host, port) ):
-            print("connect_with_node: Already connected with this node.")
-            return;            
+        # Check if node is already connected with this node!
+        for node in self.nodesOut:
+            if ( node.get_host() == host and node.get_port() == port ):
+                print("connect_with_node: Already connected with this node.")
+                return True
         
         try:
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -265,12 +256,8 @@ class Node(threading.Thread):
                 self.dprint("TcpServerNode: Wait for incoming connection")
                 connection, client_address = self.sock.accept()
 
-                print("with_node_connected(" + client_address[0] + ", " + str(self.get_port()) + ")")
-
-                if ( self.check_node_connected(client_address[0], self.get_port()) ):
-                    self.dprint("connect_with_node: Node wants to connect, while we are connected with node.")
-                    connection.close();
-                    return;
+                # TODO: Startup first communication in which the details of the node is communicated
+                # TODO: 
                 
                 thread_client = self.create_new_connection(connection, client_address, self.callback)
                 thread_client.start()
