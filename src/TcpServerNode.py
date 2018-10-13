@@ -207,12 +207,13 @@ class Node(threading.Thread):
         for node in self.nodesOut:
             if ( node.get_host() == host and node.get_port() == port ):
                 return True
-
+        
         return False
 
     # Make a connection with another node that is running on host with port.
     # When the connection is made, an event is triggered CONNECTEDWITHNODE.
     def connect_with_node(self, host, port):
+        print("connect_with_node(" + host + ", " + str(port) + ")")
         if ( host == self.host and port == self.port ):
             print("connect_with_node: Cannot connect with yourself!!")
             return;
@@ -264,8 +265,10 @@ class Node(threading.Thread):
                 self.dprint("TcpServerNode: Wait for incoming connection")
                 connection, client_address = self.sock.accept()
 
+                print("with_node_connected(" + client_address[0] + ", " + str(self.get_port()) + ")")
+
                 if ( self.check_node_connected(client_address[0], self.get_port()) ):
-                    print("connect_with_node: Node wants to connect, while we are connected with node.")
+                    self.dprint("connect_with_node: Node wants to connect, while we are connected with node.")
                     connection.close();
                     return;
                 

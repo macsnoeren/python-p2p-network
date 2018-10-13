@@ -12,6 +12,8 @@
 import time
 import sys
 
+sys.path.insert(0, '../src') # Import the files where the modules are located
+
 from AvansNode import AvansNode
 
 node1 = AvansNode('92.222.168.248', 10000)
@@ -34,30 +36,22 @@ node5.start()
 
 time.sleep(1)
 
-print "Connect with 1 (should be okay!)"
 node2.connect_with_node('92.222.168.248', 10000)
+node2.connect_with_node('92.222.168.248', 20000)
+node2.connect_with_node('92.222.168.248', 30000)
 
-print "Connect with 1 (should not be possible, already connected!)"
-node2.connect_with_node('92.222.168.248', 10000)
+node3.connect_with_node('92.222.168.248', 10000)
+node3.connect_with_node('92.222.168.248', 20000)
+node3.connect_with_node('92.222.168.248', 50000)
+node3.connect_with_node('92.222.168.248', 40000)
 
-print "Node 1 wants to connect to 2 (should not be possible, already connected with node)"
-node1.connect_with_node('92.222.168.248', 20000)
+node4.connect_with_node('92.222.168.248', 10000)
+node4.connect_with_node('92.222.168.248', 20000)
+node4.connect_with_node('92.222.168.248', 50000)
+node4.connect_with_node('92.222.168.248', 30000)
 
-#node2.connect_with_node('92.222.168.248', 20000)
-#node2.connect_with_node('92.222.168.248', 30000)
-
-#node3.connect_with_node('92.222.168.248', 10000)
-#node3.connect_with_node('92.222.168.248', 20000)
-#node3.connect_with_node('92.222.168.248', 50000)
-#node3.connect_with_node('92.222.168.248', 40000)
-
-#node4.connect_with_node('92.222.168.248', 10000)
-#node4.connect_with_node('92.222.168.248', 20000)
-#node4.connect_with_node('92.222.168.248', 50000)
-#node4.connect_with_node('92.222.168.248', 30000)
-
-#node5.connect_with_node('92.222.168.248', 10000)
-#node5.connect_with_node('92.222.168.248', 20000)
+node5.connect_with_node('92.222.168.248', 10000)
+node5.connect_with_node('92.222.168.248', 20000)
 
 time.sleep(5)
 

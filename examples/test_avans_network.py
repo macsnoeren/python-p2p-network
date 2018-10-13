@@ -12,6 +12,8 @@
 import time
 import sys
 
+sys.path.insert(0, '../src') # Import the files where the modules are located
+
 from AvansNode import AvansNode
 
 node1 = AvansNode('92.222.168.248', 10000)

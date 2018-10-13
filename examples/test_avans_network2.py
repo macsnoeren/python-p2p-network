@@ -13,6 +13,8 @@ import time
 import sys
 import random
 
+sys.path.insert(0, '../src') # Import the files where the modules are located
+
 from AvansNode import AvansNode
 
 total_nodes = 10
@@ -52,7 +54,7 @@ print("Making the connections!")
 for i in range(total_nodes):
     print("Creating connection " + str(i))
     nodes[i].connect_with_node('localhost', basePort + random.randint(1, total_nodes/5)*100)
-    time.sleep(1)
+    #time.sleep(1)
 
 print("Network started.")
 
