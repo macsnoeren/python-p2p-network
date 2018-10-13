@@ -39,6 +39,7 @@ class AvansNode (TcpServerNode.Node):
     # hashed. Every data object that contains the same values, should result
     # into the dame unique string.
     #
+    # => Serialize (Wat is gangbaar om altijd hetzelfde te stringify'en)
     def get_data_uniq_string(self, data):
         uniq = ""        
         if ( isinstance(data, dict) ):
@@ -53,7 +54,7 @@ class AvansNode (TcpServerNode.Node):
             else:
                 uniq =  uniq + str(data).replace("\n", "-n")
 
-        return uniq
+        return uniq   
 
     # Returns the hased version of the data dict. The dict can contain lists and dicts, but
     # it must be based as dict.
