@@ -12,7 +12,7 @@
 import time
 import sys
 
-sys.path.insert(0, '../src') # Import the files where the modules are located
+sys.path.insert(0, '../p2pnet') # Import the files where the modules are located
 
 from AvansNode import AvansNode
 
