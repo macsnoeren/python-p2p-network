@@ -48,42 +48,10 @@ class Node(threading.Thread):
         # Debugging on or off!
         self.debug = False
 
-        # For visuals!!
-        self.visuals = False
-        self.udp_server = None
-
-    def get_message_count_send(self):
-        return self.message_count_send
-
-    def get_message_count_recv(self):
-        return self.message_count_recv
-
-    def enable_visuals(self):
-        self.visuals = True
-        self.udp_server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.send_visuals("node-new", {"host": self.host, "port": self.port})
-
-    def send_visuals(self, type, data):
-        if self.visuals:
-            data["__id"] = self.get_id()
-            data["__host"] = self.host;
-            data["__port"] = self.port;
-            data["__node"] = type
-            data["__timestamp"] = time.time()
-
-            message = json.dumps(data, separators=(',', ':'));
-            self.debug_print("Visuals sending: " + message)
-            self.udp_server.sendto(message, ('dev.codingskills.nl', 15000))
-            self.udp_server.sendto(message, ('codingskills.nl', 15000))
-
-            del data["__id"]
-            del data["__host"]
-            del data["__port"]
-            del data["__node"]
-            del data["__timestamp"]
-
-    def enable_debug(self):
-        self.debug = True
+    @property
+    def all_nodes(self):
+        # Get the all connected nodes
+        return self.nodesIn + self.nodesOut
 
     def debug_print(self, message):
         if self.debug:
@@ -92,7 +60,7 @@ class Node(threading.Thread):
     # Creates the TCP/IP socket and bind is to the ip and port
     def init_server(self):
         print("Initialisation of the TcpServer on port: " + str(self.port) + " on node (" + self.id + ")")
-        self.sock.bind(('', self.port))
+        self.sock.bind((self.host, self.port))
         self.sock.settimeout(10.0)
         self.sock.listen(1)
 
@@ -102,22 +70,6 @@ class Node(threading.Thread):
         print("Connection status:")
         print("- Total nodes connected with us: %d" % len(self.nodesIn))
         print("- Total nodes connected to     : %d" % len(self.nodesOut))
-
-    # TODO: Remove this methods, are redundant
-    def get_inbound_nodes(self):
-        return self.nodesIn
-
-    def get_outbound_nodes(self):
-        return self.nodesOut
-
-    def get_id(self):
-        return self.id
-
-    def get_host(self):
-        return self.host
-
-    def get_port(self):
-        return self.port
 
     # Misleading function name, while this function checks whether the connected nodes have been terminated
     # by the other host. If so, clean the array list of the nodes.
@@ -146,7 +98,7 @@ class Node(threading.Thread):
     def create_message(self, data):
         self.message_count_send = self.message_count_send + 1
         data['_mcs'] = self.message_count_send
-        data['_mcr'] = self.get_message_count_recv()
+        data['_mcr'] = self.message_count_recv
 
         return data
 
