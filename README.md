@@ -31,11 +31,11 @@ other, the node that the server node is connected with
 data, when available this holds the data as python data variable
 
 Event callback is called by the node. node is the object that generated the event. other is the node that caused the event. The following even types exist:
-+ inbound_node_disconnected – Connected node with us closed
-+ outbound_node_disconnected – Connection with node closed
-+ outbound_node_connected – Connection with node established
-+ inbound_node_connected – Node connected with the server
-+ node_message – Message from a connected node (data available)
++ NODEINBOUNDCLOSED – Connected node closed
++ NODEOUTBOUNDCLOSED – Connection with node closed
++ CONNECTEDWITHNODE – Connection with node established
++ NODECONNECTED – Node connected with the server
++ NODEMESSAGE – Message from a connected node (data available)
 
 ## Example
 ###test_tcp_server_node_callback.py
