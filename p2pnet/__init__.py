@@ -99,7 +99,6 @@ class Node(threading.Thread):
         self.message_count_send = self.message_count_send + 1
         data['_mcs'] = self.message_count_send
         data['_mcr'] = self.message_count_recv
-
         return data
 
     # Send a message to all the nodes that are connected with this node.
@@ -328,7 +327,6 @@ class NodeConnection(threading.Thread):
 
                     try:
                         data = json.loads(message)
-                        print(data)
 
                     except Exception as e:
                         print("NodeConnection: Data could not be parsed (%s) (%s)" % (line, str(e)))
