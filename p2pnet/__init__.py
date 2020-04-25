@@ -150,8 +150,9 @@ class Node(threading.Thread):
             thread_client = self.create_new_connection(sock, (host, port), self.callback)
             thread_client.start()
             self.nodesOut.append(thread_client)
-            self.inbound_node_connected(thread_client)
 
+            # Capture Event
+            self.inbound_node_connected(thread_client)
             if self.callback is not None:
                 self.callback("outbound_node_connected", self, thread_client, {})
 
@@ -240,6 +241,12 @@ class Node(threading.Thread):
 
     def inbound_node_disconnected(self, node, data):
         self.debug_print("inbound_node_disconnected: " + node.getName() + ": " + str(data))
+
+    def __str__(self):
+        return 'Node: {}:{}'.format(self.host, self.port)
+
+    def __repr__(self):
+        return '<Node {}:{} id: {}>'.format(self.host, self.port, self.id)
 
 
 class NodeConnection(threading.Thread):
@@ -353,3 +360,9 @@ class NodeConnection(threading.Thread):
         self.sock.settimeout(None)
         self.sock.close()
         self.nodeServer.debug_print("NodeConnection: Stopped")
+
+    def __str__(self):
+        return 'NodeConnection: {}:{} <-> {}:{}'.format(self.nodeServer.host, self.nodeServer.port, self.host, self.port)
+
+    def __repr__(self):
+        return '<NodeConnection: Node {}:{} <-> Connection {}:{}>'.format(self.nodeServer.host, self.nodeServer.port, self.host, self.port)
