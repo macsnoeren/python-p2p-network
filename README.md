@@ -31,7 +31,7 @@ other, the node that the server node is connected with
 data, when available this holds the data as python data variable
 
 Event callback is called by the node. node is the object that generated the event. other is the node that caused the event. The following even types exist:
-+ inbound_node_disconnected – Connected node with us closed
++ node_message – Connected node with us closed
 + outbound_node_disconnected – Connection with node closed
 + outbound_node_connected – Connection with node established
 + inbound_node_connected – Node connected with the server
@@ -95,14 +95,14 @@ class MyPeer2PeerNode (TcpServerNode.Node):
     def inbound_node_connected(self, node):
         print("p2p_event_node_connected: " + node.getName())
 
-    def event_node_inbound_closed(self, node):
+    def inbound_node_disconnected(self, node):
         print("p2p_event_node_inbound_closed: " + node.getName())
 
     def outbound_node_disconnected(self, node):
         print("p2p_event_node_outbound_closed: " + node.getName())
 
     # If a message comes in, determines what to do!
-    def inbound_node_disconnected(self, node, data):
+    def node_message(self, node, data):
         print("p2p_event_node_message: " + node.getName() + ": " + str(data))
 ````
 

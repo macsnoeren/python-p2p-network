@@ -48,6 +48,12 @@ class Node(threading.Thread):
         # Debugging on or off!
         self.debug = False
 
+        self.handshake_data = {'type': 'handshake',
+                               'message_protocol': 'python-p2p-network',
+                               'message_format': 'json',
+                               'host': self.host, 'port': self.port,
+                               'id': self.id}
+
     @property
     def all_nodes(self):
         # Get the all connected nodes
@@ -73,14 +79,14 @@ class Node(threading.Thread):
 
     # Misleading function name, while this function checks whether the connected nodes have been terminated
     # by the other host. If so, clean the array list of the nodes.
-    # When a connection is closed, an event is send inbound_node_disconnected or outbound_node_disconnected
+    # When a connection is closed, an event is send node_message or outbound_node_disconnected
     def delete_closed_connections(self):
         for n in self.nodesIn:
             if n.terminate_flag.is_set():
-                self.event_node_inbound_closed(n)
+                self.inbound_node_disconnected(n)
 
                 if self.callback is not None:
-                    self.callback("inbound_node_disconnected", self, n, {})
+                    self.callback("node_message", self, n, {})
 
                 n.join()
                 del self.nodesIn[self.nodesIn.index(n)]
@@ -186,10 +192,12 @@ class Node(threading.Thread):
                 self.debug_print("TcpServerNode: Wait for incoming connection")
                 connection, client_address = self.sock.accept()
 
-                # TODO: Startup first communication in which the details of the node is communicated (handshake)
-
                 thread_client = self.create_new_connection(connection, client_address, self.callback)
                 thread_client.start()
+
+                thread_client.send(self.handshake_data)
+                time.sleep(0.5)
+
                 self.nodesIn.append(thread_client)
 
                 # Event Captured
@@ -198,7 +206,7 @@ class Node(threading.Thread):
                     self.callback("inbound_node_connected", self, thread_client, {})
 
             except socket.timeout:
-                pass
+                self.debug_print('Connection timeout!')
 
             except Exception as e:
                 raise e
@@ -233,14 +241,14 @@ class Node(threading.Thread):
     def inbound_node_connected(self, node):
         self.debug_print("inbound_node_connected: " + node.getName())
 
-    def event_node_inbound_closed(self, node):
-        self.debug_print("event_node_inbound_closed: " + node.getName())
+    def inbound_node_disconnected(self, node):
+        self.debug_print("inbound_node_disconnected: " + node.getName())
 
     def outbound_node_disconnected(self, node):
         self.debug_print("outbound_node_disconnected: " + node.getName())
 
-    def inbound_node_disconnected(self, node, data):
-        self.debug_print("inbound_node_disconnected: " + node.getName() + ": " + str(data))
+    def node_message(self, node, data):
+        self.debug_print("node_message: " + node.getName() + ": " + str(data))
 
     def __str__(self):
         return 'Node: {}:{}'.format(self.host, self.port)
@@ -263,9 +271,9 @@ class NodeConnection(threading.Thread):
 
         self.host = client_address[0]
         self.port = client_address[1]
-        self.nodeServer = node_server
+        self.node_server = node_server
         self.sock = sock
-        self.clientAddress = client_address
+        self.client_address = client_address
         self.callback = callback
         self.terminate_flag = threading.Event()
 
@@ -277,24 +285,39 @@ class NodeConnection(threading.Thread):
         id.update(t.encode('ascii'))
         self.id = id.hexdigest()
 
-        self.nodeServer.debug_print(
+        self.node_server.debug_print(
             "NodeConnection.send: Started with client (" + self.id + ") '" + self.host + ":" + str(self.port) + "'")
 
     # Send data to the node. The data should be a python variable
     # This data is converted into json and send.
     def send(self, data):
         try:
-            message = json.dumps(data, separators=(',', ':')) + "-TSN";
+            message = json.dumps(data, separators=(',', ':')) + "-TSN"
             self.sock.sendall(message.encode('utf-8'))
 
         except Exception as e:
-            self.nodeServer.debug_print("NodeConnection.send: Unexpected error:", sys.exc_info()[0])
-            self.nodeServer.debug_print("Exception: " + e)
+            self.node_server.debug_print("NodeConnection.send: Unexpected error:", sys.exc_info()[0])
+            self.node_server.debug_print("Exception: " + str(e))
             self.terminate_flag.set()
 
-    @staticmethod
-    def check_message(data):
-        return True
+    def check_message(self, data):
+        if 'type' in data.keys() and data['type'] == 'handshake':
+            if self.check_handshake(data):
+                self.send(self.node_server.handshake_data)
+                self.id = data['id']
+                self.host = data['host']
+                self.port = data['port']
+            else:
+                self.send({'data': 'handshake_fail'})
+                self.stop()
+            return False
+        else:
+            return True
+
+    def check_handshake(self, data):
+        check_message_protocol = data['message_protocol'] == self.node_server.handshake_data['message_protocol']
+        check_message_format = data['message_format'] == self.node_server.handshake_data['message_format']
+        return check_message_format and check_message_protocol
 
     # Stop the node client. Please make sure you join the thread.
     def stop(self):
@@ -312,19 +335,19 @@ class NodeConnection(threading.Thread):
                 line = self.sock.recv(4096)  # the line ends with -TSN\n
 
             except socket.timeout:
-                self.nodeServer.debug_print("Connection timeout")
+                self.node_server.debug_print("Connection timeout")
 
             except Exception as e:
                 self.terminate_flag.set()
-                self.nodeServer.debug_print("NodeConnection: Socket has been terminated (%s)" % line)
-                self.nodeServer.debug_print(e)
+                self.node_server.debug_print("NodeConnection: Socket has been terminated (%s)" % line)
+                self.node_server.debug_print(e)
 
             if line != "":
                 try:
                     self.buffer += str(line.decode('utf-8'))
 
                 except Exception as e:
-                    print("NodeConnection: Decoding line error")
+                    print("NodeConnection: Decoding line error | " + str(e))
 
                 # Get the messages
                 index = self.buffer.find("-TSN")
@@ -336,22 +359,22 @@ class NodeConnection(threading.Thread):
                         data = json.loads(message)
 
                     except Exception as e:
-                        print("NodeConnection: Data could not be parsed (%s) (%s)" % (line, str(e)))
+                        self.node_server.debug_print("NodeConnection: Data could not be parsed (%s) (%s)" % (line, str(e)))
 
                     if self.check_message(data):
-                        self.nodeServer.message_count_recv += 1
+                        self.node_server.message_count_recv += 1
 
                         # Capture Event
-                        self.nodeServer.inbound_node_disconnected(self, data)
+                        self.node_server.node_message(self, data)
                         if self.callback is not None:
-                            self.callback("node_message", self.nodeServer, self, data)
+                            self.callback("node_message", self.node_server, self, data)
                     else:
-                        self.nodeServer.debug_print("-------------------------------------------")
-                        self.nodeServer.debug_print("Message is damaged and not correct:\nMESSAGE:")
-                        self.nodeServer.debug_print(message)
-                        self.nodeServer.debug_print("DATA:")
-                        self.nodeServer.debug_print(str(data))
-                        self.nodeServer.debug_print("-------------------------------------------")
+                        self.node_server.debug_print("-------------------------------------------")
+                        self.node_server.debug_print("Message is damaged and not correct:\nMESSAGE:")
+                        self.node_server.debug_print(message)
+                        self.node_server.debug_print("DATA:")
+                        self.node_server.debug_print(str(data))
+                        self.node_server.debug_print("-------------------------------------------")
 
                     index = self.buffer.find("-TSN")
 
@@ -359,10 +382,10 @@ class NodeConnection(threading.Thread):
 
         self.sock.settimeout(None)
         self.sock.close()
-        self.nodeServer.debug_print("NodeConnection: Stopped")
+        self.node_server.debug_print("NodeConnection: Stopped")
 
     def __str__(self):
-        return 'NodeConnection: {}:{} <-> {}:{}'.format(self.nodeServer.host, self.nodeServer.port, self.host, self.port)
+        return 'NodeConnection: {}:{} <-> {}:{} ({})'.format(self.node_server.host, self.node_server.port, self.host, self.port, self.id)
 
     def __repr__(self):
-        return '<NodeConnection: Node {}:{} <-> Connection {}:{}>'.format(self.nodeServer.host, self.nodeServer.port, self.host, self.port)
+        return '<NodeConnection: Node {}:{} <-> Connection {}:{}>'.format(self.node_server.host, self.node_server.port, self.host, self.port)

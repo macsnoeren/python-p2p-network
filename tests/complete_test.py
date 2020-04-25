@@ -27,12 +27,14 @@ if __name__ == '__main__':
     print('node 0 -> node 1')
     node_0.connect_with_node('127.0.0.1', 8001)
     time.sleep(2)
+
     print('node 2 -> node 0')
     node_2.connect_with_node('127.0.0.1', 8000)
     time.sleep(2)
+
     print('show node 0 connections:')
     for connection in node_0.all_nodes:
-        print('connection <{}:{}>'.format(connection.host, connection.port))
+        print(connection)
 
     time.sleep(2)
     print('Send Message Test:')
