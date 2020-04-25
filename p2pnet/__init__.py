@@ -87,7 +87,7 @@ class Node(threading.Thread):
 
         for n in self.nodesOut:
             if n.terminate_flag.is_set():
-                self.event_node_outbound_closed(n)
+                self.outbound_node_disconnected(n)
 
                 if self.callback is not None:
                     self.callback("outbound_node_disconnected", self, n, {})
@@ -151,7 +151,7 @@ class Node(threading.Thread):
             thread_client = self.create_new_connection(sock, (host, port), self.callback)
             thread_client.start()
             self.nodesOut.append(thread_client)
-            self.event_connected_with_node(thread_client)
+            self.inbound_node_connected(thread_client)
 
             if self.callback is not None:
                 self.callback("outbound_node_connected", self, thread_client, {})
@@ -193,7 +193,7 @@ class Node(threading.Thread):
                 self.nodesIn.append(thread_client)
 
                 # Event Captured
-                self.event_node_connected(thread_client)
+                self.outbound_node_connected(thread_client)
                 if self.callback is not None:
                     self.callback("inbound_node_connected", self, thread_client, {})
 
@@ -227,20 +227,20 @@ class Node(threading.Thread):
     # In the event a callback can be called!
 
     # node is the node thread that is running to get information and send information to.
-    def event_node_connected(self, node):
-        self.debug_print("event_node_connected: " + node.getName())
+    def outbound_node_connected(self, node):
+        self.debug_print("outbound_node_connected: " + node.getName())
 
-    def event_connected_with_node(self, node):
-        self.debug_print("event_node_connected: " + node.getName())
+    def inbound_node_connected(self, node):
+        self.debug_print("inbound_node_connected: " + node.getName())
 
     def event_node_inbound_closed(self, node):
         self.debug_print("event_node_inbound_closed: " + node.getName())
 
-    def event_node_outbound_closed(self, node):
-        self.debug_print("event_node_outbound_closed: " + node.getName())
+    def outbound_node_disconnected(self, node):
+        self.debug_print("outbound_node_disconnected: " + node.getName())
 
-    def event_node_message(self, node, data):
-        self.debug_print("event_node_message: " + node.getName() + ": " + str(data))
+    def inbound_node_disconnected(self, node, data):
+        self.debug_print("inbound_node_disconnected: " + node.getName() + ": " + str(data))
 
 
 class NodeConnection(threading.Thread):
@@ -281,21 +281,14 @@ class NodeConnection(threading.Thread):
             message = json.dumps(data, separators=(',', ':')) + "-TSN";
             self.sock.sendall(message.encode('utf-8'))
 
-            # For visuals!
-            self.nodeServer.send_visuals("node-send", data)
-
         except Exception as e:
             self.nodeServer.debug_print("NodeConnection.send: Unexpected error:", sys.exc_info()[0])
             self.nodeServer.debug_print("Exception: " + e)
             self.terminate_flag.set()
 
     @staticmethod
-    def check_message(self, data):
+    def check_message(data):
         return True
-
-    def get_id(self):
-        # TODO: Remove this, are redundant
-        return self.id
 
     # Stop the node client. Please make sure you join the thread.
     def stop(self):
@@ -341,17 +334,13 @@ class NodeConnection(threading.Thread):
                         print("NodeConnection: Data could not be parsed (%s) (%s)" % (line, str(e)))
 
                     if self.check_message(data):
-                        self.nodeServer.message_count_recv = self.nodeServer.message_count_recv + 1
-                        self.nodeServer.event_node_message(self, data)
+                        self.nodeServer.message_count_recv += 1
 
+                        # Capture Event
+                        self.nodeServer.inbound_node_disconnected(self, data)
                         if self.callback is not None:
                             self.callback("node_message", self.nodeServer, self, data)
-
-                        # For visuals!
-                        self.nodeServer.send_visuals("node-receive", data)
-
                     else:
-                        self.nodeServer.send_visuals("node-error", {"error": "failed check"})
                         self.nodeServer.debug_print("-------------------------------------------")
                         self.nodeServer.debug_print("Message is damaged and not correct:\nMESSAGE:")
                         self.nodeServer.debug_print(message)

@@ -89,20 +89,20 @@ class MyPeer2PeerNode (TcpServerNode.Node):
         print("MyPeer2PeerNode: Started")
 
     # Method override, implement here your own functionality!
-    def event_node_connected(self, node):
+    def outbound_node_connected(self, node):
         print("p2p_event_node_connected: " + node.getName())
 
-    def event_connected_with_node(self, node):
+    def inbound_node_connected(self, node):
         print("p2p_event_node_connected: " + node.getName())
 
     def event_node_inbound_closed(self, node):
         print("p2p_event_node_inbound_closed: " + node.getName())
 
-    def event_node_outbound_closed(self, node):
+    def outbound_node_disconnected(self, node):
         print("p2p_event_node_outbound_closed: " + node.getName())
 
     # If a message comes in, determines what to do!
-    def event_node_message(self, node, data):
+    def inbound_node_disconnected(self, node, data):
         print("p2p_event_node_message: " + node.getName() + ": " + str(data))
 ````
 

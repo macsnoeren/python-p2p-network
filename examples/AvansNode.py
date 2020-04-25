@@ -164,13 +164,13 @@ class AvansNode (TcpServerNode.Node):
     # When a node is connected to us, this event is launched!
     #
     def event_node_connected(self, node):
-        super(AvansNode, self).event_node_connected(node)
+        super(AvansNode, self).outbound_node_connected(node)
         self.send_details(node)
 
     # When we connect to a node and it is successfull, this event is launched.
     #
     def event_connected_with_node(self, node):
-        super(AvansNode, self).event_connected_with_node(node)
+        super(AvansNode, self).inbound_node_connected(node)
 
     # When a node, that had made a connection to us, is closing the connection,
     # this event is launched
@@ -182,13 +182,13 @@ class AvansNode (TcpServerNode.Node):
     # this event is launched.
     #
     def event_node_outbound_closed(self, node):
-        super(AvansNode, self).event_node_outbound_closed(node)
+        super(AvansNode, self).outbound_node_disconnected(node)
         self.dprint("p2p_event_node_outbound_closed: " + node.getName())
 
     # If a message comes in fro mthe nodes, determine what to do!
     #
     def event_node_message(self, node, data):
-        super(AvansNode, self).event_node_message(node, data)
+        super(AvansNode, self).inbound_node_disconnected(node, data)
         
         if (data['_type'] == 'ping'):
             self.received_ping(node, data)
