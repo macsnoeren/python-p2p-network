@@ -73,14 +73,14 @@ class Node(threading.Thread):
 
     # Misleading function name, while this function checks whether the connected nodes have been terminated
     # by the other host. If so, clean the array list of the nodes.
-    # When a connection is closed, an event is send NODEINBOUNDCLOSED or NODEOUTBOUNDCLOSED
+    # When a connection is closed, an event is send inbound_node_disconnected or outbound_node_disconnected
     def delete_closed_connections(self):
         for n in self.nodesIn:
             if n.terminate_flag.is_set():
                 self.event_node_inbound_closed(n)
 
                 if self.callback is not None:
-                    self.callback("NODEINBOUNDCLOSED", self, n, {})
+                    self.callback("inbound_node_disconnected", self, n, {})
 
                 n.join()
                 del self.nodesIn[self.nodesIn.index(n)]
@@ -90,7 +90,7 @@ class Node(threading.Thread):
                 self.event_node_outbound_closed(n)
 
                 if self.callback is not None:
-                    self.callback("NODEOUTBOUNDCLOSED", self, n, {})
+                    self.callback("outbound_node_disconnected", self, n, {})
 
                 n.join()
                 del self.nodesOut[self.nodesIn.index(n)]
@@ -132,9 +132,8 @@ class Node(threading.Thread):
             self.debug_print("TcpServer.send2node: Could not send the data, node is not found!")
 
     # Make a connection with another node that is running on host with port.
-    # When the connection is made, an event is triggered CONNECTEDWITHNODE.
+    # When the connection is made, an event is triggered outbound_node_connected.
     def connect_with_node(self, host, port):
-        print("connect_with_node(" + host + ", " + str(port) + ")")
         if host == self.host and port == self.port:
             print("connect_with_node: Cannot connect with yourself!!")
 
@@ -155,7 +154,7 @@ class Node(threading.Thread):
             self.event_connected_with_node(thread_client)
 
             if self.callback is not None:
-                self.callback("CONNECTEDWITHNODE", self, thread_client, {})
+                self.callback("outbound_node_connected", self, thread_client, {})
 
             self.print_connections()
 
@@ -180,22 +179,23 @@ class Node(threading.Thread):
 
     # This method is required for the Thead function and is called when it is started.
     # This function implements the main loop of this thread.
+
     def run(self):
         while not self.terminate_flag.is_set():  # Check whether the thread needs to be closed
             try:
                 self.debug_print("TcpServerNode: Wait for incoming connection")
                 connection, client_address = self.sock.accept()
 
-                # TODO: Startup first communication in which the details of the node is communicated
+                # TODO: Startup first communication in which the details of the node is communicated (handshake)
 
                 thread_client = self.create_new_connection(connection, client_address, self.callback)
                 thread_client.start()
                 self.nodesIn.append(thread_client)
 
+                # Event Captured
                 self.event_node_connected(thread_client)
-
                 if self.callback is not None:
-                    self.callback("NODECONNECTED", self, thread_client, {})
+                    self.callback("inbound_node_connected", self, thread_client, {})
 
             except socket.timeout:
                 pass
@@ -223,9 +223,6 @@ class Node(threading.Thread):
         self.sock.close()
         print("TcpServer stopped")
 
-        # For visuals!
-        self.send_visuals("node-closed", {"host": self.host, "port": self.port})
-
     # Started to implement the events, so this class can be extended with a better class
     # In the event a callback can be called!
 
@@ -233,26 +230,14 @@ class Node(threading.Thread):
     def event_node_connected(self, node):
         self.debug_print("event_node_connected: " + node.getName())
 
-        # For visuals!
-        self.send_visuals("node-connection-from", {"host": node.host, "port": node.port})
-
     def event_connected_with_node(self, node):
         self.debug_print("event_node_connected: " + node.getName())
-
-        # For visuals!
-        self.send_visuals("node-connection-to", {"host": node.host, "port": node.port})
 
     def event_node_inbound_closed(self, node):
         self.debug_print("event_node_inbound_closed: " + node.getName())
 
-        # For visuals!
-        self.send_visuals("node-connection-from-closed", {"host": node.host, "port": node.port})
-
     def event_node_outbound_closed(self, node):
         self.debug_print("event_node_outbound_closed: " + node.getName())
-
-        # For visuals!
-        self.send_visuals("node-connection-to-closed", {"host": node.host, "port": node.port})
 
     def event_node_message(self, node, data):
         self.debug_print("event_node_message: " + node.getName() + ": " + str(data))
@@ -288,12 +273,6 @@ class NodeConnection(threading.Thread):
 
         self.nodeServer.debug_print(
             "NodeConnection.send: Started with client (" + self.id + ") '" + self.host + ":" + str(self.port) + "'")
-
-    def get_host(self):
-        return self.host
-
-    def get_port(self):
-        return self.port
 
     # Send data to the node. The data should be a python variable
     # This data is converted into json and send.
@@ -366,7 +345,7 @@ class NodeConnection(threading.Thread):
                         self.nodeServer.event_node_message(self, data)
 
                         if self.callback is not None:
-                            self.callback("NODEMESSAGE", self.nodeServer, self, data)
+                            self.callback("node_message", self.nodeServer, self, data)
 
                         # For visuals!
                         self.nodeServer.send_visuals("node-receive", data)
