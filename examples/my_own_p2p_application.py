@@ -31,7 +31,7 @@ node_3.connect_with_node('127.0.0.1', 8002)
 
 time.sleep(2)
 
-node_1.send_to_nodes({"message": "Hi there!"})
+node_1.send_to_nodes("message: Hi there!")
 
 time.sleep(5)
 
