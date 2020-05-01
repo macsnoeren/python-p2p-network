@@ -183,8 +183,8 @@ class Node(threading.Thread):
             try:
                 self.debug_print("Node: Wait for incoming connection")
                 connection, client_address = self.sock.accept()
-
-                thread_client = self.create_new_connection(connection, client_address)
+                
+                thread_client = self.create_new_connection(connection, client_address.host, client_address.port)
                 thread_client.start()
 
                 self.nodes_inbound.append(thread_client)
