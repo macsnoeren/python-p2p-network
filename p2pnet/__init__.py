@@ -146,7 +146,7 @@ class Node(threading.Thread):
             self.debug_print("connecting to %s port %s" % (host, port))
             sock.connect((host, port))
 
-            thread_client = self.create_new_connection(sock, (host, port), self.callback)
+            thread_client = self.create_new_connection(sock, host, port)
             thread_client.start()
             self.node_outbound.append(thread_client)
             self.inbound_node_connected(thread_client)
@@ -172,8 +172,8 @@ class Node(threading.Thread):
         self.terminate_flag.set()
 
     # This method can be overrided when a different nodeconnection is required!
-    def create_new_connection(self, connection, client_address):
-        return NodeConnection(self, connection, client_address)
+    def create_new_connection(self, connection, host, port):
+        return NodeConnection(self, connection, host, port)
 
     # This method is required for the Thead function and is called when it is started.
     # This function implements the main loop of this thread.
@@ -271,11 +271,11 @@ class NodeConnection(threading.Thread):
     Events are send when data is coming from the node Messages could be sent to this node.
     '''
 
-    def __init__(self, node_server, sock, client_address):
+    def __init__(self, node_server, sock, host, port):
         super(NodeConnection, self).__init__()
 
-        self.host = client_address[0]
-        self.port = client_address[1]
+        self.host = host
+        self.port = port
         self.node_server = node_server
         self.sock = sock
         self.client_address = client_address
