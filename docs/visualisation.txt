@@ -1,6 +1,0 @@
-NODES
-Send with UDP, server has a websocket, the client use lib below to add
-nodes based on the UDP messages that are comming in.
-
-http://visjs.org/examples/network/nodeStyles/customGroups.html
-
