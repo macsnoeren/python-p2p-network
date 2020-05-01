@@ -92,16 +92,18 @@ class Node(threading.Thread):
                 n.join()
                 del self.node_outbound[self.nodes_inbound.index(n)]
 
-    def create_message(self, data):
-        self.message_count_send = self.message_count_send + 1
-        data['_mcs'] = self.message_count_send
-        data['_mcr'] = self.message_count_recv
-        return data
+    # Obsolete, while this defines that we use JSON formatted message, it is up to the programmer how to deal with this!
+    # Will be deleted in the future!
+    #def create_message(self, data):
+    #    data['_mcs'] = self.message_count_send
+    #    data['_mcr'] = self.message_count_recv
+    #    return data
 
     # Send a message to all the nodes that are connected with this node.
     # data is a python variable which is converted to JSON that is send over to the other node.
     # exclude list gives all the nodes to which this data should not be sent.
     def send_to_nodes(self, data, exclude=[]):
+        self.message_count_send = self.message_count_send + 1
         for n in self.nodes_inbound:
             if n in exclude:
                 self.debug_print("Node send_to_nodes: Excluding node in sending the message")
@@ -117,10 +119,13 @@ class Node(threading.Thread):
     # Send the data to the node n if it exists.
     # data is a python variable which is converted to JSON that is send over to the other node.
     def send_to_node(self, n, data):
+        self.message_count_send = self.message_count_send + 1
         self.delete_closed_connections()
         if n in self.nodes_inbound or n in self.node_outbound:
             try:
-                n.send(self.create_message(data))
+                #Obsolete while this uses JSON format, the user of the module decide what to do!
+                #n.send(self.create_message(data))
+                n.send(data)
 
             except Exception as e:
                 self.debug_print("Node send_to_node: Error while sending data to the node (" + str(e) + ")")
@@ -179,7 +184,7 @@ class Node(threading.Thread):
     def create_new_connection(self, connection, id, host, port):
         return NodeConnection(self, connection, id, host, port)
 
-    # This method is required for the Thead function and is called when it is started.
+    # This method is required for the Thread function and is called when it is started.
     # This function implements the main loop of this thread.
 
     def run(self):
@@ -302,8 +307,11 @@ class NodeConnection(threading.Thread):
     # to be send, please use self.create_message(data)
     def send(self, data):
         try:
-            message = json.dumps(data, separators=(',', ':')) + "-TSN"
-            self.sock.sendall(message.encode('utf-8'))
+            # Obsolete, it uses JSON, while the user of the module could decide whether to use JSON.
+            #message = json.dumps(data, separators=(',', ':')) + "-TSN"
+            #self.sock.sendall(message.encode('utf-8'))
+            data = data + "-TSN"
+            self.sock.sendall(data.encode('utf-8'))
 
         except Exception as e:
             self.main_node.debug_print("NodeConnection.send: Unexpected error:", sys.exc_info()[0])
@@ -312,8 +320,8 @@ class NodeConnection(threading.Thread):
 
     # This method should be implemented by yourself! We do not know when the message is
     # correct.
-    def check_message(self, data):
-            return True
+    # def check_message(self, data):
+    #         return True
 
     # Stop the node client. Please make sure you join the thread.
     def stop(self):
@@ -350,24 +358,28 @@ class NodeConnection(threading.Thread):
                     message = self.buffer[0:index]
                     self.buffer = self.buffer[index + 4::]
 
-                    try:
-                        data = json.loads(message)
+                    self.main_node.message_count_recv += 1
+                    self.main_node.node_message(self, message)
 
-                    except Exception as e:
-                        self.main_node.debug_print("NodeConnection: Data could not be parsed (%s) (%s)" % (line, str(e)))
-
-                    if self.check_message(data):
-                        self.main_node.message_count_recv += 1
-                        self.main_node.node_message(self, data)
-
-                    else:
-                        self.main_node.messgaE_count_rerr += 1
-                        self.main_node.debug_print("-------------------------------------------")
-                        self.main_node.debug_print("Message is damaged and not correct:\nMESSAGE:")
-                        self.main_node.debug_print(message)
-                        self.main_node.debug_print("DATA:")
-                        self.main_node.debug_print(str(data))
-                        self.main_node.debug_print("-------------------------------------------")
+                    # Obsolete code that pinned down the user of the module to use JSON!
+                    #try:
+                    #    data = json.loads(message)
+                    #
+                    #except Exception as e:
+                    #    self.main_node.debug_print("NodeConnection: Data could not be parsed (%s) (%s)" % (line, str(e)))
+                    #
+                    #if self.check_message(data):
+                    #    self.main_node.message_count_recv += 1
+                    #    self.main_node.node_message(self, data)
+                    #
+                    #else:
+                    #    self.main_node.messgaE_count_rerr += 1
+                    #    self.main_node.debug_print("-------------------------------------------")
+                    #    self.main_node.debug_print("Message is damaged and not correct:\nMESSAGE:")
+                    #    self.main_node.debug_print(message)
+                    #    self.main_node.debug_print("DATA:")
+                    #    self.main_node.debug_print(str(data))
+                    #    self.main_node.debug_print("-------------------------------------------")
 
                     index = self.buffer.find("-TSN")
 

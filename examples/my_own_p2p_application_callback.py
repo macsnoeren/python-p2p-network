@@ -45,7 +45,7 @@ node_3.connect_with_node('127.0.0.1', 8001)
 
 time.sleep(2)
 
-node_1.send_to_nodes({"message": "hoi from node 1"})
+node_1.send_to_nodes("message: hoi from node 1")
 
 time.sleep(5)
 
