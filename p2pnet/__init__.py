@@ -35,7 +35,8 @@ class Node(threading.Thread):
         self.node_outbound = []  # Nodes that we are connected to (US)->N
 
         # Create a unique ID for each node.
-        id = hashlib.md5()
+        # TODO: A fixed unique ID is required for each node, node some random is created, need to think of it.
+        id = hashlib.sha512()
         t = self.host + str(self.port) + str(random.randint(1, 99999999))
         id.update(t.encode('ascii'))
         self.id = id.hexdigest()
