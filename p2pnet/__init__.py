@@ -184,7 +184,7 @@ class Node(threading.Thread):
                 self.debug_print("Node: Wait for incoming connection")
                 connection, client_address = self.sock.accept()
                 
-                thread_client = self.create_new_connection(connection, client_address.host, client_address.port)
+                thread_client = self.create_new_connection(connection, client_address[0], client_address[1])
                 thread_client.start()
 
                 self.nodes_inbound.append(thread_client)
@@ -278,7 +278,6 @@ class NodeConnection(threading.Thread):
         self.port = port
         self.node_server = node_server
         self.sock = sock
-        self.client_address = client_address
         self.terminate_flag = threading.Event()
 
         # Variable for parsing the incoming json messages
