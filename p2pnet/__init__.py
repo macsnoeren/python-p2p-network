@@ -10,7 +10,6 @@ import threading
 import random
 import hashlib
 
-
 class Node(threading.Thread):
 
     def __init__(self, host, port, callback):
@@ -47,12 +46,6 @@ class Node(threading.Thread):
 
         # Debugging on or off!
         self.debug = False
-
-        self.handshake_data = {'type': 'handshake',
-                               'message_protocol': 'python-p2p-network',
-                               'message_format': 'json',
-                               'host': self.host, 'port': self.port,
-                               'id': self.id}
 
     @property
     def all_nodes(self):
@@ -194,9 +187,6 @@ class Node(threading.Thread):
 
                 thread_client = self.create_new_connection(connection, client_address, self.callback)
                 thread_client.start()
-
-                thread_client.send(self.handshake_data)
-                time.sleep(0.5)
 
                 self.nodesIn.append(thread_client)
 
