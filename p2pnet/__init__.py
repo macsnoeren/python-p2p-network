@@ -4,7 +4,6 @@ __license__ = "GNU 3.0"
 
 import socket
 import sys
-import json
 import time
 import threading
 import random
@@ -263,7 +262,6 @@ class Node(threading.Thread):
         self.debug_print("node wants to disconnect with oher outbound node: " + node.id)
         if self.callback is not None:
             self.callback("node_disconnect_with_outbound_node", self, node, {})
-        node.send(self.create_message({"type": "message", "message": "Terminate connection"})) # Not requird! is specific!
 
     def node_request_to_stop(self):
         self.debug_print("node is requested to stop!")
