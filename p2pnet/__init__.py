@@ -11,6 +11,11 @@ import random
 import hashlib
 
 class Node(threading.Thread):
+    __doc__ = '''
+    Class Node:
+    Implements a node that is able to connect to other nodes and is able to accept connections from other nodes.
+    After instantiation, the node creates a TCP/IP server with the given port.
+    '''
 
     def __init__(self, host, port, callback):
         super(Node, self).__init__()
@@ -26,10 +31,10 @@ class Node(threading.Thread):
         self.callback = callback
 
         # Nodes that have established a connection with this node
-        self.nodesIn = []  # Nodes that are connect with us N->(US)->N
+        self.nodes_inbound = []  # Nodes that are connect with us N->(US)->N
 
         # Nodes that this nodes is connected to
-        self.nodesOut = []  # Nodes that we are connected to (US)->N
+        self.node_outbound = []  # Nodes that we are connected to (US)->N
 
         # Create a unique ID for each node.
         id = hashlib.md5()
@@ -51,7 +56,7 @@ class Node(threading.Thread):
     # Get the all connected nodes
     @property
     def all_nodes(self):
-        return self.nodesIn + self.nodesOut
+        return self.nodes_inbound + self.node_outbound
 
     def debug_print(self, message):
         if self.debug:
@@ -68,24 +73,24 @@ class Node(threading.Thread):
     # a connection with this node and one for the node that this node has made connection with.
     def print_connections(self):
         print("Node connection overview:")
-        print("- Total nodes connected with us: %d" % len(self.nodesIn))
-        print("- Total nodes connected to     : %d" % len(self.nodesOut))
+        print("- Total nodes connected with us: %d" % len(self.nodes_inbound))
+        print("- Total nodes connected to     : %d" % len(self.node_outbound))
 
     # Misleading function name, while this function checks whether the connected nodes have been terminated
     # by the other host. If so, clean the array list of the nodes.
     # When a connection is closed, an event is send node_message or outbound_node_disconnected
     def delete_closed_connections(self):
-        for n in self.nodesIn:
+        for n in self.nodes_inbound:
             if n.terminate_flag.is_set():
                 self.inbound_node_disconnected(n)
                 n.join()
-                del self.nodesIn[self.nodesIn.index(n)]
+                del self.nodes_inbound[self.nodes_inbound.index(n)]
 
-        for n in self.nodesOut:
+        for n in self.node_outbound:
             if n.terminate_flag.is_set():
                 self.outbound_node_disconnected(n)
                 n.join()
-                del self.nodesOut[self.nodesIn.index(n)]
+                del self.node_outbound[self.nodes_inbound.index(n)]
 
     def create_message(self, data):
         self.message_count_send = self.message_count_send + 1
@@ -97,13 +102,13 @@ class Node(threading.Thread):
     # data is a python variable which is converted to JSON that is send over to the other node.
     # exclude list gives all the nodes to which this data should not be sent.
     def send_to_nodes(self, data, exclude=[]):
-        for n in self.nodesIn:
+        for n in self.nodes_inbound:
             if n in exclude:
                 self.debug_print("Node send_to_nodes: Excluding node in sending the message")
             else:
                 self.send_to_node(n, data)
 
-        for n in self.nodesOut:
+        for n in self.node_outbound:
             if n in exclude:
                 self.debug_print("Node send_to_nodes: Excluding node in sending the message")
             else:
@@ -113,7 +118,7 @@ class Node(threading.Thread):
     # data is a python variable which is converted to JSON that is send over to the other node.
     def send_to_node(self, n, data):
         self.delete_closed_connections()
-        if n in self.nodesIn or n in self.nodesOut:
+        if n in self.nodes_inbound or n in self.node_outbound:
             try:
                 n.send(self.create_message(data))
 
@@ -130,7 +135,7 @@ class Node(threading.Thread):
             return False
 
         # Check if node is already connected with this node!
-        for node in self.nodesOut:
+        for node in self.node_outbound:
             if node.get_host() == host and node.get_port() == port:
                 print("connect_with_node: Already connected with this node.")
                 return True
@@ -142,7 +147,7 @@ class Node(threading.Thread):
 
             thread_client = self.create_new_connection(sock, (host, port), self.callback)
             thread_client.start()
-            self.nodesOut.append(thread_client)
+            self.node_outbound.append(thread_client)
             self.inbound_node_connected(thread_client)
             self.print_connections()
 
@@ -151,11 +156,11 @@ class Node(threading.Thread):
 
     # Disconnect with a node. You could sens a last message to the node!
     def disconnect_with_node(self, node):
-        if node in self.nodesOut:
+        if node in self.node_outbound:
             self.node_disconnect_with_outbound_node(node)
             node.stop()
             node.join()  # When this is here, the application is waiting and waiting
-            del self.nodesOut[self.nodesOut.index(node)]
+            del self.node_outbound[self.node_outbound.index(node)]
 
         else:
             print("Node disconnect_with_node: cannot disconnect with a node with which we are not connected.")
@@ -181,7 +186,7 @@ class Node(threading.Thread):
                 thread_client = self.create_new_connection(connection, client_address, self.callback)
                 thread_client.start()
 
-                self.nodesIn.append(thread_client)
+                self.nodes_inbound.append(thread_client)
 
                 self.outbound_node_connected(thread_client)
                 
@@ -194,18 +199,18 @@ class Node(threading.Thread):
             time.sleep(0.01)
 
         print("Node stopping...")
-        for t in self.nodesIn:
+        for t in self.nodes_inbound:
             t.stop()
 
-        for t in self.nodesOut:
+        for t in self.node_outbound:
             t.stop()
 
         time.sleep(1)
 
-        for t in self.nodesIn:
+        for t in self.nodes_inbound:
             t.join()
 
-        for t in self.nodesOut:
+        for t in self.node_outbound:
             t.join()
 
         self.sock.close()
