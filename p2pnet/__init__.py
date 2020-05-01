@@ -184,7 +184,7 @@ class Node(threading.Thread):
                 self.debug_print("Node: Wait for incoming connection")
                 connection, client_address = self.sock.accept()
 
-                thread_client = self.create_new_connection(connection, client_address, self.callback)
+                thread_client = self.create_new_connection(connection, client_address)
                 thread_client.start()
 
                 self.nodes_inbound.append(thread_client)
@@ -271,7 +271,7 @@ class NodeConnection(threading.Thread):
     Events are send when data is coming from the node Messages could be sent to this node.
     '''
 
-    def __init__(self, node_server, sock, client_address, callback):
+    def __init__(self, node_server, sock, client_address):
         super(NodeConnection, self).__init__()
 
         self.host = client_address[0]
@@ -279,7 +279,6 @@ class NodeConnection(threading.Thread):
         self.node_server = node_server
         self.sock = sock
         self.client_address = client_address
-        self.callback = callback
         self.terminate_flag = threading.Event()
 
         # Variable for parsing the incoming json messages
