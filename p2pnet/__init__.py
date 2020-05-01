@@ -172,8 +172,8 @@ class Node(threading.Thread):
         self.terminate_flag.set()
 
     # This method can be overrided when a different nodeconnection is required!
-    def create_new_connection(self, connection, client_address, callback):
-        return NodeConnection(self, connection, client_address, callback)
+    def create_new_connection(self, connection, client_address):
+        return NodeConnection(self, connection, client_address)
 
     # This method is required for the Thead function and is called when it is started.
     # This function implements the main loop of this thread.
@@ -222,32 +222,32 @@ class Node(threading.Thread):
 
     # node is the node thread that is running to get information and send information to.
     def outbound_node_connected(self, node):
-        self.debug_print("outbound_node_connected: " + node.getName())
+        self.debug_print("outbound_node_connected: " + node.id)
         if self.callback is not None:
             self.callback("outbound_node_connected", self, node, {})
 
     def inbound_node_connected(self, node):
-        self.debug_print("inbound_node_connected: " + node.getName())
+        self.debug_print("inbound_node_connected: " + node.id)
         if self.callback is not None:
             self.callback("inbound_node_connected", self, node, {})
 
     def inbound_node_disconnected(self, node):
-        self.debug_print("inbound_node_disconnected: " + node.getName())
+        self.debug_print("inbound_node_disconnected: " + node.id)
         if self.callback is not None:
             self.callback("inbound_node_disconnected", self, node, {})
 
     def outbound_node_disconnected(self, node):
-        self.debug_print("outbound_node_disconnected: " + node.getName())
+        self.debug_print("outbound_node_disconnected: " + node.id)
         if self.callback is not None:
             self.callback("outbound_node_disconnected", self, node, {})
 
     def node_message(self, node, data):
-        self.debug_print("node_message: " + node.getName() + ": " + str(data))
+        self.debug_print("node_message: " + node.id + ": " + str(data))
         if self.callback is not None:
             self.callback("node_message", self, node, data)
 
     def node_disconnect_with_outbound_node(self, node):
-        self.debug_print("node wants to disconnect with oher outbound node: " + node.getName())
+        self.debug_print("node wants to disconnect with oher outbound node: " + node.id)
         if self.callback is not None:
             self.callback("node_disconnect_with_outbound_node", self, node, {})
         node.send(self.create_message({"type": "message", "message": "Terminate connection"})) # Not requird! is specific!
