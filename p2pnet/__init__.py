@@ -47,8 +47,9 @@ class Node(threading.Thread):
         self.init_server()
 
         # Message counters to make sure everyone is able to track the total messages
-        self.message_count_send = 0;
-        self.message_count_recv = 0;
+        self.message_count_send = 0
+        self.message_count_recv = 0
+        self.messgaE_count_rerr = 0
 
         # Debugging on or off!
         self.debug = False
@@ -123,7 +124,7 @@ class Node(threading.Thread):
                 n.send(self.create_message(data))
 
             except Exception as e:
-                self.debug_print("Node send_to_node: Error while sending data to the node (" + str(e) + ")");
+                self.debug_print("Node send_to_node: Error while sending data to the node (" + str(e) + ")")
         else:
             self.debug_print("Node send_to_node: Could not send the data, node is not found!")
 
@@ -242,6 +243,8 @@ class Node(threading.Thread):
 
     def node_message(self, node, data):
         self.debug_print("node_message: " + node.getName() + ": " + str(data))
+        if self.callback is not None:
+            self.callback("node_message", self, node, data)
 
     def node_disconnect_with_outbound_node(self, node):
         self.debug_print("node wants to disconnect with oher outbound node: " + node.getName())
@@ -264,10 +267,8 @@ class Node(threading.Thread):
 class NodeConnection(threading.Thread):
     __doc__ = '''
     Class NodeConnection:
-    Implements the connection that is made with a node.
-    Both inbound and outbound nodes are created with this class.
-    Events are send when data is coming from the node
-    Messages could be sent to this node.
+    Implements the connection that is made with a node. Both inbound and outbound nodes are created with this class.
+    Events are send when data is coming from the node Messages could be sent to this node.
     '''
 
     def __init__(self, node_server, sock, client_address, callback):
@@ -284,7 +285,7 @@ class NodeConnection(threading.Thread):
         # Variable for parsing the incoming json messages
         self.buffer = ""
 
-        id = hashlib.md5()
+        id = hashlib.md5() # We could change it to a better hashing algoritm
         t = self.host + str(self.port) + str(random.randint(1, 99999999))
         id.update(t.encode('ascii'))
         self.id = id.hexdigest()
@@ -293,7 +294,8 @@ class NodeConnection(threading.Thread):
             "NodeConnection.send: Started with client (" + self.id + ") '" + self.host + ":" + str(self.port) + "'")
 
     # Send data to the node. The data should be a python variable
-    # This data is converted into json and send.
+    # This data is converted into json and send. When you want to create a message
+    # to be send, please use self.create_message(data)
     def send(self, data):
         try:
             message = json.dumps(data, separators=(',', ':')) + "-TSN"
@@ -304,24 +306,10 @@ class NodeConnection(threading.Thread):
             self.node_server.debug_print("Exception: " + str(e))
             self.terminate_flag.set()
 
+    # This method should be implemented by yourself! We do not know when the message is
+    # correct.
     def check_message(self, data):
-        if 'type' in data.keys() and data['type'] == 'handshake':
-            if self.check_handshake(data):
-                self.send(self.node_server.handshake_data)
-                self.id = data['id']
-                self.host = data['host']
-                self.port = data['port']
-            else:
-                self.send({'data': 'handshake_fail'})
-                self.stop()
-            return False
-        else:
             return True
-
-    def check_handshake(self, data):
-        check_message_protocol = data['message_protocol'] == self.node_server.handshake_data['message_protocol']
-        check_message_format = data['message_format'] == self.node_server.handshake_data['message_format']
-        return check_message_format and check_message_protocol
 
     # Stop the node client. Please make sure you join the thread.
     def stop(self):
@@ -329,7 +317,6 @@ class NodeConnection(threading.Thread):
 
     # Required to implement the Thread. This is the main loop of the node client.
     def run(self):
-
         # Timeout, so the socket can be closed when it is dead!
         self.sock.settimeout(10.0)
 
@@ -339,7 +326,7 @@ class NodeConnection(threading.Thread):
                 line = self.sock.recv(4096)  # the line ends with -TSN\n
 
             except socket.timeout:
-                self.node_server.debug_print("Connection timeout")
+                self.node_server.debug_print("NodeConnection: timeout")
 
             except Exception as e:
                 self.terminate_flag.set()
@@ -367,12 +354,10 @@ class NodeConnection(threading.Thread):
 
                     if self.check_message(data):
                         self.node_server.message_count_recv += 1
-
-                        # Capture Event
                         self.node_server.node_message(self, data)
-                        if self.callback is not None:
-                            self.callback("node_message", self.node_server, self, data)
+
                     else:
+                        self.node_server.messgaE_count_rerr += 1
                         self.node_server.debug_print("-------------------------------------------")
                         self.node_server.debug_print("Message is damaged and not correct:\nMESSAGE:")
                         self.node_server.debug_print(message)
