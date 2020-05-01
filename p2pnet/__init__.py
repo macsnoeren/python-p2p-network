@@ -129,6 +129,7 @@ class Node(threading.Thread):
 
     # Make a connection with another node that is running on host with port.
     # When the connection is made, an event is triggered outbound_node_connected.
+    # TODO: think wheter we need an error event to trigger when the connection has failed!
     def connect_with_node(self, host, port):
         if host == self.host and port == self.port:
             print("connect_with_node: Cannot connect with yourself!!")
@@ -153,7 +154,7 @@ class Node(threading.Thread):
             thread_client.start()
 
             self.node_outbound.append(thread_client)
-            self.inbound_node_connected(thread_client)
+            self.outbound_node_connected(thread_client)
 
         except Exception as e:
             self.debug_print("TcpServer.connect_with_node: Could not connect with node. (" + str(e) + ")")
@@ -196,7 +197,7 @@ class Node(threading.Thread):
 
                 self.nodes_inbound.append(thread_client)
 
-                self.outbound_node_connected(thread_client)
+                self.inbound_node_connected(thread_client)
                 
             except socket.timeout:
                 self.debug_print('Node: Connection timeout!')
