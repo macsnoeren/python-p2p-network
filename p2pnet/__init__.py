@@ -41,15 +41,16 @@ class Node(threading.Thread):
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.init_server()
 
+        # Message counters to make sure everyone is able to track the total messages
         self.message_count_send = 0;
         self.message_count_recv = 0;
 
         # Debugging on or off!
         self.debug = False
 
+    # Get the all connected nodes
     @property
     def all_nodes(self):
-        # Get the all connected nodes
         return self.nodesIn + self.nodesOut
 
     def debug_print(self, message):
@@ -58,7 +59,7 @@ class Node(threading.Thread):
 
     # Creates the TCP/IP socket and bind is to the ip and port
     def init_server(self):
-        print("Initialisation of the TcpServer on port: " + str(self.port) + " on node (" + self.id + ")")
+        print("Initialisation of the Node on port: " + str(self.port) + " on node (" + self.id + ")")
         self.sock.bind((self.host, self.port))
         self.sock.settimeout(10.0)
         self.sock.listen(1)
@@ -66,7 +67,7 @@ class Node(threading.Thread):
     # Print the nodes with this node is connected to. It makes two lists. One for the nodes that have established
     # a connection with this node and one for the node that this node has made connection with.
     def print_connections(self):
-        print("Connection status:")
+        print("Node connection overview:")
         print("- Total nodes connected with us: %d" % len(self.nodesIn))
         print("- Total nodes connected to     : %d" % len(self.nodesOut))
 
@@ -77,20 +78,12 @@ class Node(threading.Thread):
         for n in self.nodesIn:
             if n.terminate_flag.is_set():
                 self.inbound_node_disconnected(n)
-
-                if self.callback is not None:
-                    self.callback("node_message", self, n, {})
-
                 n.join()
                 del self.nodesIn[self.nodesIn.index(n)]
 
         for n in self.nodesOut:
             if n.terminate_flag.is_set():
                 self.outbound_node_disconnected(n)
-
-                if self.callback is not None:
-                    self.callback("outbound_node_disconnected", self, n, {})
-
                 n.join()
                 del self.nodesOut[self.nodesIn.index(n)]
 
@@ -106,13 +99,13 @@ class Node(threading.Thread):
     def send_to_nodes(self, data, exclude=[]):
         for n in self.nodesIn:
             if n in exclude:
-                self.debug_print("TcpServer.send2nodes: Excluding node in sending the message")
+                self.debug_print("Node send_to_nodes: Excluding node in sending the message")
             else:
                 self.send_to_node(n, data)
 
         for n in self.nodesOut:
             if n in exclude:
-                self.debug_print("TcpServer.send2nodes: Excluding node in sending the message")
+                self.debug_print("Node send_to_nodes: Excluding node in sending the message")
             else:
                 self.send_to_node(n, data)
 
@@ -125,15 +118,16 @@ class Node(threading.Thread):
                 n.send(self.create_message(data))
 
             except Exception as e:
-                self.debug_print("TcpServer.send2node: Error while sending data to the node (" + str(e) + ")");
+                self.debug_print("Node send_to_node: Error while sending data to the node (" + str(e) + ")");
         else:
-            self.debug_print("TcpServer.send2node: Could not send the data, node is not found!")
+            self.debug_print("Node send_to_node: Could not send the data, node is not found!")
 
     # Make a connection with another node that is running on host with port.
     # When the connection is made, an event is triggered outbound_node_connected.
     def connect_with_node(self, host, port):
         if host == self.host and port == self.port:
             print("connect_with_node: Cannot connect with yourself!!")
+            return False
 
         # Check if node is already connected with this node!
         for node in self.nodesOut:
@@ -149,27 +143,26 @@ class Node(threading.Thread):
             thread_client = self.create_new_connection(sock, (host, port), self.callback)
             thread_client.start()
             self.nodesOut.append(thread_client)
-
-            # Capture Event
             self.inbound_node_connected(thread_client)
-            if self.callback is not None:
-                self.callback("outbound_node_connected", self, thread_client, {})
-
             self.print_connections()
 
         except Exception as e:
             self.debug_print("TcpServer.connect_with_node: Could not connect with node. (" + str(e) + ")")
 
-    # Disconnect with a node. It sends a last message to the node!
+    # Disconnect with a node. You could sens a last message to the node!
     def disconnect_with_node(self, node):
         if node in self.nodesOut:
-            node.send(self.create_message({"type": "message", "message": "Terminate connection"}))
+            self.node_disconnect_with_outbound_node(node)
             node.stop()
             node.join()  # When this is here, the application is waiting and waiting
             del self.nodesOut[self.nodesOut.index(node)]
 
+        else:
+            print("Node disconnect_with_node: cannot disconnect with a node with which we are not connected.")
+
     # When this function is executed, the thread will stop!
     def stop(self):
+        self.node_request_to_stop()
         self.terminate_flag.set()
 
     # This method can be overrided when a different nodeconnection is required!
@@ -182,7 +175,7 @@ class Node(threading.Thread):
     def run(self):
         while not self.terminate_flag.is_set():  # Check whether the thread needs to be closed
             try:
-                self.debug_print("TcpServerNode: Wait for incoming connection")
+                self.debug_print("Node: Wait for incoming connection")
                 connection, client_address = self.sock.accept()
 
                 thread_client = self.create_new_connection(connection, client_address, self.callback)
@@ -190,20 +183,17 @@ class Node(threading.Thread):
 
                 self.nodesIn.append(thread_client)
 
-                # Event Captured
                 self.outbound_node_connected(thread_client)
-                if self.callback is not None:
-                    self.callback("inbound_node_connected", self, thread_client, {})
-
+                
             except socket.timeout:
-                self.debug_print('Connection timeout!')
+                self.debug_print('Node: Connection timeout!')
 
             except Exception as e:
                 raise e
 
             time.sleep(0.01)
 
-        print("TcpServer stopping...")
+        print("Node stopping...")
         for t in self.nodesIn:
             t.stop()
 
@@ -219,7 +209,7 @@ class Node(threading.Thread):
             t.join()
 
         self.sock.close()
-        print("TcpServer stopped")
+        print("Node stopped")
 
     # Started to implement the events, so this class can be extended with a better class
     # In the event a callback can be called!
@@ -227,18 +217,37 @@ class Node(threading.Thread):
     # node is the node thread that is running to get information and send information to.
     def outbound_node_connected(self, node):
         self.debug_print("outbound_node_connected: " + node.getName())
+        if self.callback is not None:
+            self.callback("outbound_node_connected", self, node, {})
 
     def inbound_node_connected(self, node):
         self.debug_print("inbound_node_connected: " + node.getName())
+        if self.callback is not None:
+            self.callback("inbound_node_connected", self, node, {})
 
     def inbound_node_disconnected(self, node):
         self.debug_print("inbound_node_disconnected: " + node.getName())
+        if self.callback is not None:
+            self.callback("inbound_node_disconnected", self, node, {})
 
     def outbound_node_disconnected(self, node):
         self.debug_print("outbound_node_disconnected: " + node.getName())
+        if self.callback is not None:
+            self.callback("outbound_node_disconnected", self, node, {})
 
     def node_message(self, node, data):
         self.debug_print("node_message: " + node.getName() + ": " + str(data))
+
+    def node_disconnect_with_outbound_node(self, node):
+        self.debug_print("node wants to disconnect with oher outbound node: " + node.getName())
+        if self.callback is not None:
+            self.callback("node_disconnect_with_outbound_node", self, node, {})
+        node.send(self.create_message({"type": "message", "message": "Terminate connection"})) # Not requird! is specific!
+
+    def node_request_to_stop(self):
+        self.debug_print("node is requested to stop!")
+        if self.callback is not None:
+            self.callback("node_request_to_stop", self, {}, {})
 
     def __str__(self):
         return 'Node: {}:{}'.format(self.host, self.port)
