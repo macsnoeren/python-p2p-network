@@ -167,21 +167,7 @@ class SecurityNode (Node):
     # into the dame unique string.
     def get_data_uniq_string(self, data):
         return json.dumps(data, sort_keys=True)
-        uniq = ""        
-        if ( isinstance(data, dict) ):
-            for key in sorted(data):
-                uniq = uniq + key + self.get_data_uniq_string(data[key]).replace("\n", "-n")
-
-        else:
-            if ( isinstance(data, list) ):
-                for element in sorted(data):
-                    uniq = uniq + self.get_data_uniq_string(element).replace("\n", "-n")
-
-            else:
-                uniq =  uniq + str(data).replace("\n", "-n")
-
-        return uniq
-
+        
     # Returns the hased version of the data dict. The dict can contain lists and dicts, but
     # it must be based as dict.
     def get_hash(self, data):
@@ -298,6 +284,7 @@ class SecurityNode (Node):
     # DISCOVERY                                           #
     #######################################################
 
+    # TODO: Improve discovery information that is send back by the nodes.
     def send_discovery(self):
         self.send_to_nodes(self.create_message({'_type': 'discovery', 'id': self.id, 'timestamp': time.time() }))
 
