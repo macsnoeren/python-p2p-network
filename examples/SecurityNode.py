@@ -165,24 +165,8 @@ class SecurityNode (Node):
     # other dicts and lists, is converted to a unique string that can be
     # hashed. Every data object that contains the same values, should result
     # into the dame unique string.
-    #
-    # => Serialize (Wat is gangbaar om altijd hetzelfde te stringify'en)
-    # => Idea: json.dumps(my_dict, sort_keys=True) 
     def get_data_uniq_string(self, data):
-        uniq = ""        
-        if ( isinstance(data, dict) ):
-            for key in sorted(data):
-                uniq = uniq + key + self.get_data_uniq_string(data[key]).replace("\n", "-n")
-
-        else:
-            if ( isinstance(data, list) ):
-                for element in sorted(data):
-                    uniq = uniq + self.get_data_uniq_string(element).replace("\n", "-n")
-
-            else:
-                uniq =  uniq + str(data).replace("\n", "-n")
-
-        return uniq
+        return json.dumps(data, sort_keys=True)
 
     # Returns the hased version of the data dict. The dict can contain lists and dicts, but
     # it must be based as dict.
