@@ -166,7 +166,7 @@ class SecurityNode (Node):
     # hashed. Every data object that contains the same values, should result
     # into the dame unique string.
     def get_data_uniq_string(self, data):
-        #return json.dumps(data, sort_keys=True)
+        return json.dumps(data, sort_keys=True)
         uniq = ""        
         if ( isinstance(data, dict) ):
             for key in sorted(data):
