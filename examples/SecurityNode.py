@@ -116,10 +116,13 @@ class SecurityNode (Node):
         except Exception as e:
             self.debug_print("Failed to create message " + str(e))
 
+    # Check the message hashed and if the signature matches the public key
+    # TODO: if a node is known, the public key should be stored, so this could not be changed by the
+    #       node in the future.
     def check_message(self, data):
-        print("MESSAGE RECEIVED:")
-        print("_hash: " + data['_hash'])
-        print("_signature: " + data['_signature'])
+        self.debug_print("incoming message information:")
+        self.debug_print("_hash: " + data['_hash'])
+        self.debug_print("_signature: " + data['_signature'])
 
         signature  = data['_signature']
         public_key = data['_public_key']
@@ -133,23 +136,15 @@ class SecurityNode (Node):
         # 1. Check the signature!
         del data['_public_key']
         del data['_signature']
-        print("RECOMPILED SIGNATURE HASHED MESSAGE: " + self.get_data_uniq_string(data))
-        print("HASH: " + self.get_hash(data))
-        if ( self.verify_data(data, public_key, signature) == False):
-            print("Signature not correct!")
-            return False
+        checkSignature = self.verify_data(data, public_key, signature)
         
-        # 2. Check the hash
+        # 2. Check the hash of the data
         del data['_hash']
-        if ( self.get_hash(data) != hash ):
-            print("Hash not correct!")
-            return False
+        checkDataHash = (self.get_hash(data) == data_hash)
 
         # 3. Check the message id
         del data['_message_id']
-        if ( self.get_hash(data) != message_id ):
-            print("Message ID not correct!")
-            return False
+        checkMessageId = (self.get_hash(data) == message_id)
 
         # 4. Restore the data
         data['_signature']  = signature
@@ -157,8 +152,13 @@ class SecurityNode (Node):
         data['_hash']       = data_hash
         data['_message_id'] = message_id
         data['_timestamp']  = timestamp
-                
-        return True
+
+        self.debug_print("Checking incoming message:")
+        self.debug_print(" signature : " + str(checkSignature))
+        self.debug_print(" data hash : " + str(checkDataHash))
+        self.debug_print(" message id: " + str(checkMessageId))
+
+        return checkSignature and checkDataHash and checkMessageId
 
     def send_message(self, message):
         self.send_to_nodes(self.create_message({ "message": message }))
@@ -169,6 +169,7 @@ class SecurityNode (Node):
     # into the dame unique string.
     #
     # => Serialize (Wat is gangbaar om altijd hetzelfde te stringify'en)
+    # => Idea: json.dumps(my_dict, sort_keys=True) 
     def get_data_uniq_string(self, data):
         uniq = ""        
         if ( isinstance(data, dict) ):
@@ -188,15 +189,13 @@ class SecurityNode (Node):
     # Returns the hased version of the data dict. The dict can contain lists and dicts, but
     # it must be based as dict.
     def get_hash(self, data):
-        h = hashlib.sha512()
-        h.update(self.get_data_uniq_string(data).encode("utf-8"))
-        
-        #print("GETHASH:------")
-        #print("DATA: " + self.get_data_uniq_string(data))
-        #print("HASH: " + h.hexdigest())
-        #print("END GETHASH:------")
-        
-        return h.hexdigest()
+        try:
+            h = hashlib.sha512()
+            h.update(self.get_data_uniq_string(data).encode("utf-8"))        
+            return h.hexdigest()
+
+        except Exception as e:
+            print("Failed to hash the message: " + str(e))
 
     # Return the public key that is generated or loaded for this node.
     def get_public_key(self):
@@ -208,54 +207,57 @@ class SecurityNode (Node):
 
     # Encrypt a message using a public key, most of the time from someone else
     def encrypt(self, message, public_key):
-        key = RSA.importKey(public_key)
-        cipher = PKCS1_v1_5_Cipher.new(key)
-        return b64encode( cipher.encrypt(message) )
+        try:
+            key = RSA.importKey(public_key)
+            cipher = PKCS1_v1_5_Cipher.new(key)
+            return b64encode( cipher.encrypt(message) )
+
+        except Exception as e:
+            print("Failed to encrypt the message: " + str(e))
 
     # Decrypt a ciphertext message that has been encrypted with our public key by
     # someone else.
     def decrypt(self, ciphertext):
-        ciphertext = b64decode( ciphertext )
-        cipher = PKCS1_v1_5_Cipher.new(self.rsa_key)
-        sentinal = "sentinal"
-        return cipher.decrypt(ciphertext, sentinal)
+        try:
+            ciphertext = b64decode( ciphertext )
+            cipher = PKCS1_v1_5_Cipher.new(self.rsa_key)
+            sentinal = "sentinal" # What is this again?
+            return cipher.decrypt(ciphertext, sentinal)
+
+        except Exception as e:
+            print("Failed to decrypt the message: " + str(e))
 
     # Sign the message using our private key
     def sign(self, message):
         try:
             message_hash = SHA512.new(message.encode('utf-8'))
+
+            print("MESSAGE TO HASH: " + message)
+            print("MESSAGE HASH: " + message_hash.hexdigest())
+
             signer = PKCS1_v1_5_Signature.new(self.rsa_key)
-            #signature = b64encode( signer.sign(message_hash) )
             signature = b64encode(signer.sign(message_hash))
-            #print("SIGNATURE CREATED: " + str(signature))
             return signature.decode('utf-8')
 
         except Exception as e:
-            print("CRYPTO: " + str(e))
+            print("Failed to sign the message: " + str(e))
 
     # Sign the data, that is hashed, with our private key.
     def sign_data(self, data):
-        message = self.get_data_uniq_string(data)
-
-        # DEBUG
-        #m = json.dumps(data, separators=(',', ':'))
-        #print("SIGN SEND ------------------------\n")
-        #print(m)
-        #print(message)
-        #print("SHA: " + SHA512.new(message.encode('utf-8')).hexdigest())
-        #print("------------------------\n")
-        
+        message = self.get_data_uniq_string(data)        
         return self.sign(message)
 
     # Verify the signature, based on the message, public key and signature.
     def verify(self, message, public_key, signature):
         try:
             signature = b64decode( signature.encode('utf-8') )
-            print("GOT SIGNATURE: " + str(signature))
             key = RSA.importKey(public_key)
             h = SHA512.new(message.encode('utf-8'))
-            print("GOT HASH: " + h.hexdigest())
             verifier = PKCS1_v1_5_Signature.new(key)
+            
+            self.debug_print("Message to verify: " + message)
+            self.debug_print("Hash of the message: " + h.hexdigest())
+            
             return verifier.verify(h, signature)
 
         except Exception as e:
@@ -264,11 +266,6 @@ class SecurityNode (Node):
     # Verify the signature, based on the data, public key and signature.
     def verify_data(self, data, public_key, signature):
         message = self.get_data_uniq_string(data)
-
-        # DEBUG
-        print("RECEIVED MESSAGE CALCULATION:")
-        print("_hash: " + SHA512.new(message.encode('utf-8')).hexdigest())
-
         return self.verify(message, public_key, signature)
 
     #######################################################
