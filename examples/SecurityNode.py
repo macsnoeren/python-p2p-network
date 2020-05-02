@@ -96,7 +96,7 @@ class SecurityNode (Node):
             data['_timestamp']  = time.time()
             data['_message_id'] = self.get_hash(data)
 
-            self.debug_print("Message creation:");
+            self.debug_print("Message creation:")
             self.debug_print("Message hash based on: " + self.get_data_uniq_string(data))
 
             data['_hash']       = self.get_hash(data)
@@ -189,7 +189,15 @@ class SecurityNode (Node):
     def get_hash(self, data):
         try:
             h = hashlib.sha512()
-            h.update(self.get_data_uniq_string(data).encode("utf-8"))        
+            message = self.get_data_uniq_string(data)
+
+            self.debug_print("Hashing the data:")
+            self.debug_print("Message: " + message)
+
+            h.update(message.encode("utf-8"))
+
+            self.debug_print("Hash of the message: " + h.hexdigest())
+
             return h.hexdigest()
 
         except Exception as e:
@@ -310,7 +318,7 @@ class SecurityNode (Node):
     #
     def received_discovery(self, node, data):
         if data['id'] in self.discovery_messages:
-            self.dprint("discovery_message: message already received, so not sending it")
+            self.debug_print("discovery_message: message already received, so not sending it")
 
         else:
             self.debug_print("discovery_message: process message")

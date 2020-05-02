@@ -26,6 +26,8 @@ security_node_o2.connect_with_node('127.0.0.1', 9002)
 
 time.sleep(2)
 
+security_node.debug = True
+
 running = True
 while running:
     print("Commands: message, ping, discovery, stop")
