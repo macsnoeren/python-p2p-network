@@ -52,10 +52,8 @@ class SecurityNode (Node):
             data = json.loads(message)
             print("node_message from " + connected_node.id + ": " + str(data))
 
-            if self.check_message(data):
-                print("MESSAGE IS OKE!")
-            else:
-                print("MESSAGE IS WRONG!!")
+            if not self.check_message(data):
+                print("Received message is corrupted!")
 
             if ( '_type' in data ):
                 if (data['_type'] == 'ping'):
@@ -98,18 +96,18 @@ class SecurityNode (Node):
             data['_timestamp']  = time.time()
             data['_message_id'] = self.get_hash(data)
 
-            print("HASHED MESSAGE: " + self.get_data_uniq_string(data))
+            self.debug_print("Message creation:");
+            self.debug_print("Message hash based on: " + self.get_data_uniq_string(data))
 
             data['_hash']       = self.get_hash(data)
 
-            print("SIGNATURE HASHED MESSAGE: " + self.get_data_uniq_string(data))
+            self.debug_print("Message signature based on: " + self.get_data_uniq_string(data))
 
             data['_signature']  = self.sign_data(data)
             data['_public_key'] = self.get_public_key().decode('utf-8')
 
-            print("CREATED MESSAGE:")
-            print("_hash: " + data['_hash'])
-            print("_signature: " + data['_signature'])
+            self.debug_print("_hash: " + data['_hash'])
+            self.debug_print("_signature: " + data['_signature'])
 
             return json.dumps(data, separators=(',', ':'))
 
@@ -232,8 +230,9 @@ class SecurityNode (Node):
         try:
             message_hash = SHA512.new(message.encode('utf-8'))
 
-            print("MESSAGE TO HASH: " + message)
-            print("MESSAGE HASH: " + message_hash.hexdigest())
+            self.debug_print("Signing the message:")
+            self.debug_print("Message to be hashed: " + message)
+            self.debug_print("Hash of the message: " + message_hash.hexdigest())
 
             signer = PKCS1_v1_5_Signature.new(self.rsa_key)
             signature = b64encode(signer.sign(message_hash))
