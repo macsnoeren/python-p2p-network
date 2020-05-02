@@ -8,6 +8,14 @@
 #######################################################################################################################
 import time
 import json
+import hashlib
+
+from Crypto.PublicKey import RSA
+from Crypto.Cipher import PKCS1_v1_5 as PKCS1_v1_5_Cipher
+from Crypto.Signature import PKCS1_v1_5 as PKCS1_v1_5_Signature
+from Crypto.Hash import SHA512
+from base64 import b64decode, b64encode
+
 from p2pnet import Node
 
 class SecurityNode (Node):
@@ -16,7 +24,13 @@ class SecurityNode (Node):
     def __init__(self, host, port):
         super(SecurityNode, self).__init__(host, port, None)
 
+        # Track the discovery message that are recieved, so we know when to stop!
         self.discovery_messages = {}
+
+        # The RSA public/private key from this node
+        # TODO: Get it from a file from the outside, well protected!!
+        # TODO: Maybe with password protection from the user that starts the node?!
+        self.rsa_key = RSA.generate(2048)
 
     ## EVENTS
 
@@ -38,6 +52,9 @@ class SecurityNode (Node):
             data = json.loads(message)
             print("node_message from " + connected_node.id + ": " + str(data))
 
+            if not self.check_message(data):
+                print("Received message is corrupted!")
+
             if ( '_type' in data ):
                 if (data['_type'] == 'ping'):
                     self.received_ping(connected_node, data)
@@ -52,10 +69,10 @@ class SecurityNode (Node):
                     self.received_discovery_answer(connected_node, data)
 
                 else:
-                    self.dprint("p2p_event_node_message: message type unknown: " + connected_node.id + ": " + str(data))
+                    self.debug_print("p2p_event_node_message: message type unknown: " + connected_node.id + ": " + str(data))
 
         except Exception as e:
-            self.main_node.debug_print("NodeConnection: Data could not be parsed (%s) (%s)" % (message, str(e)))
+            self.debug_print("NodeConnection: Data could not be parsed (%s) (%s)" % (message, str(e)))
        
     def node_disconnect_with_outbound_node(self, connected_node):
         print("node wants to disconnect with oher outbound node: " + connected_node.id)
@@ -66,18 +83,181 @@ class SecurityNode (Node):
 
     ## Extra application specific implementation!
 
-    # Creates a string message from the data that is provided!
     def create_message(self, data):
-        data['_mcs'] = self.message_count_send
-        data['_mcr'] = self.message_count_recv
-        return json.dumps(data, separators=(',', ':'))
+        # Somehow the data is not always cleaned up!
+        for el in ['_id', '_timestamp', '_message_id', '_hash', '_signature', '_public_key']:
+            if ( el in data ):
+                del data[el]
 
-    # Perform some check of the message
+        try:
+            data['_mcs']        = self.message_count_send
+            data['_mcr']        = self.message_count_recv
+            data['_id']         = self.id
+            data['_timestamp']  = time.time()
+            data['_message_id'] = self.get_hash(data)
+
+            self.debug_print("Message creation:")
+            self.debug_print("Message hash based on: " + self.get_data_uniq_string(data))
+
+            data['_hash']       = self.get_hash(data)
+
+            self.debug_print("Message signature based on: " + self.get_data_uniq_string(data))
+
+            data['_signature']  = self.sign_data(data)
+            data['_public_key'] = self.get_public_key().decode('utf-8')
+
+            self.debug_print("_hash: " + data['_hash'])
+            self.debug_print("_signature: " + data['_signature'])
+
+            return json.dumps(data, separators=(',', ':'))
+
+        except Exception as e:
+            self.debug_print("Failed to create message " + str(e))
+
+    # Check the message hashed and if the signature matches the public key
+    # TODO: if a node is known, the public key should be stored, so this could not be changed by the
+    #       node in the future.
     def check_message(self, data):
-        return True
+        self.debug_print("incoming message information:")
+        self.debug_print("_hash: " + data['_hash'])
+        self.debug_print("_signature: " + data['_signature'])
+
+        signature  = data['_signature']
+        public_key = data['_public_key']
+        data_hash  = data['_hash']
+        message_id = data['_message_id']
+        timestamp  = data['_timestamp']
+
+        #print("PUBLIC: KEY: " + self.get_public_key()) # Use the public key of the node to check?
+        #data['add'] = "asdasd" # Change the message for testing!
+
+        # 1. Check the signature!
+        del data['_public_key']
+        del data['_signature']
+        checkSignature = self.verify_data(data, public_key, signature)
+        
+        # 2. Check the hash of the data
+        del data['_hash']
+        checkDataHash = (self.get_hash(data) == data_hash)
+
+        # 3. Check the message id
+        del data['_message_id']
+        checkMessageId = (self.get_hash(data) == message_id)
+
+        # 4. Restore the data
+        data['_signature']  = signature
+        data['_public_key'] = public_key
+        data['_hash']       = data_hash
+        data['_message_id'] = message_id
+        data['_timestamp']  = timestamp
+
+        self.debug_print("Checking incoming message:")
+        self.debug_print(" signature : " + str(checkSignature))
+        self.debug_print(" data hash : " + str(checkDataHash))
+        self.debug_print(" message id: " + str(checkMessageId))
+
+        return checkSignature and checkDataHash and checkMessageId
 
     def send_message(self, message):
         self.send_to_nodes(self.create_message({ "message": message }))
+
+    # This function makes sure that a complex dict variable (consisting of
+    # other dicts and lists, is converted to a unique string that can be
+    # hashed. Every data object that contains the same values, should result
+    # into the dame unique string.
+    def get_data_uniq_string(self, data):
+        return json.dumps(data, sort_keys=True)
+        
+    # Returns the hased version of the data dict. The dict can contain lists and dicts, but
+    # it must be based as dict.
+    def get_hash(self, data):
+        try:
+            h = hashlib.sha512()
+            message = self.get_data_uniq_string(data)
+
+            self.debug_print("Hashing the data:")
+            self.debug_print("Message: " + message)
+
+            h.update(message.encode("utf-8"))
+
+            self.debug_print("Hash of the message: " + h.hexdigest())
+
+            return h.hexdigest()
+
+        except Exception as e:
+            print("Failed to hash the message: " + str(e))
+
+    # Return the public key that is generated or loaded for this node.
+    def get_public_key(self):
+        return self.rsa_key.publickey().exportKey("PEM")
+
+    # Get the private key that is generated or loaded for this node.
+    def get_private_key(self):
+        return self.rsa_key.exportKey("PEM")
+
+    # Encrypt a message using a public key, most of the time from someone else
+    def encrypt(self, message, public_key):
+        try:
+            key = RSA.importKey(public_key)
+            cipher = PKCS1_v1_5_Cipher.new(key)
+            return b64encode( cipher.encrypt(message) )
+
+        except Exception as e:
+            print("Failed to encrypt the message: " + str(e))
+
+    # Decrypt a ciphertext message that has been encrypted with our public key by
+    # someone else.
+    def decrypt(self, ciphertext):
+        try:
+            ciphertext = b64decode( ciphertext )
+            cipher = PKCS1_v1_5_Cipher.new(self.rsa_key)
+            sentinal = "sentinal" # What is this again?
+            return cipher.decrypt(ciphertext, sentinal)
+
+        except Exception as e:
+            print("Failed to decrypt the message: " + str(e))
+
+    # Sign the message using our private key
+    def sign(self, message):
+        try:
+            message_hash = SHA512.new(message.encode('utf-8'))
+
+            self.debug_print("Signing the message:")
+            self.debug_print("Message to be hashed: " + message)
+            self.debug_print("Hash of the message: " + message_hash.hexdigest())
+
+            signer = PKCS1_v1_5_Signature.new(self.rsa_key)
+            signature = b64encode(signer.sign(message_hash))
+            return signature.decode('utf-8')
+
+        except Exception as e:
+            print("Failed to sign the message: " + str(e))
+
+    # Sign the data, that is hashed, with our private key.
+    def sign_data(self, data):
+        message = self.get_data_uniq_string(data)        
+        return self.sign(message)
+
+    # Verify the signature, based on the message, public key and signature.
+    def verify(self, message, public_key, signature):
+        try:
+            signature = b64decode( signature.encode('utf-8') )
+            key = RSA.importKey(public_key)
+            h = SHA512.new(message.encode('utf-8'))
+            verifier = PKCS1_v1_5_Signature.new(key)
+            
+            self.debug_print("Message to verify: " + message)
+            self.debug_print("Hash of the message: " + h.hexdigest())
+            
+            return verifier.verify(h, signature)
+
+        except Exception as e:
+            print("CRYPTO: " + str(e))
+
+    # Verify the signature, based on the data, public key and signature.
+    def verify_data(self, data, public_key, signature):
+        message = self.get_data_uniq_string(data)
+        return self.verify(message, public_key, signature)
 
     #######################################################
     # PING / PONG Message packets                         #
@@ -104,6 +284,7 @@ class SecurityNode (Node):
     # DISCOVERY                                           #
     #######################################################
 
+    # TODO: Improve discovery information that is send back by the nodes.
     def send_discovery(self):
         self.send_to_nodes(self.create_message({'_type': 'discovery', 'id': self.id, 'timestamp': time.time() }))
 
@@ -122,7 +303,7 @@ class SecurityNode (Node):
     #
     def received_discovery(self, node, data):
         if data['id'] in self.discovery_messages:
-            self.dprint("discovery_message: message already received, so not sending it")
+            self.debug_print("discovery_message: message already received, so not sending it")
 
         else:
             self.debug_print("discovery_message: process message")
@@ -140,16 +321,3 @@ class SecurityNode (Node):
 
             else:
                 self.debug_print("unknwon state!")
-
-
-         # Obsolete, it uses JSON, while the user of the module could decide whether to use JSON.
-            #message = json.dumps(data, separators=(',', ':')) + "-TSN"
-            #self.sock.sendall(message.encode('utf-8'))
-
-             # Obsolete code that pinned down the user of the module to use JSON!
-                    #try:
-                    #    data = json.loads(message)
-                    #
-                    #except Exception as e:
-                    #    self.main_node.debug_print("NodeConnection: Data could not be parsed (%s) (%s)" % (line, str(e)))
-                    #
