@@ -207,3 +207,8 @@ TODO: Documentation around the functions that can be used. You could look into t
 # NodeConnection class                                       
 
 TODO: Documentation around the functions that can be used. You could look into the code.
+
+# Show case: SecurityNode
+As show case, I implement a SecurityNode that uses JSON to communicate between the nodes. It extends from the p2pnet.Node class and implements a protocol to implement application specific functionality. While I do not know yet what to implement, I already have implemented a ping-pong, message and discovery handling. The discovery function receives from every node a list of nodes they are connected to. 
+
+My main thought with the security node is to be able to security store and verify data to the network. Another idea is that you can share your "private" data with others. You are the owner of your data!
