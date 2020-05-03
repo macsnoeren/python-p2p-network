@@ -2,9 +2,7 @@
 # Author: Maurice Snoeren                                                                                             #
 # Version: 0.1 beta (use at your own risk)                                                                            #
 #                                                                                                                     #
-# SecurityNode is just a trial to implement the Node class with an application. The SecurityNode is a node that       #
-# create a security network in which data is encrypted and decrypted for the users that are connected.                #
-# It uses JSON formatted data to send to and from the nodes.
+# SecureNode                                                                                                          #
 #######################################################################################################################
 import time
 import json
@@ -18,11 +16,20 @@ from base64 import b64decode, b64encode
 
 from p2pnet.node import Node
 
-class SecurityNode (Node):
+class SecureNode (Node):
+    __doc__= '''
+    Class SecurityNode:
+    This class is a concrete implementation of the node class and communicates with JSON between the nodes. 
+    It implements a secure communication between the nodes. Not that the communication is encrypted, but
+    more on the tampering aspect. Messages are checked on the integrity (due to signing). A public/private
+    RSA key infrastructure is used to implement this. Furthermore, it implements a basic ping/pong system and
+    discovery. Using this node, you are able to implement your own protocol on top. All messages that are send
+    (make sure you use create_message method) are signed and checked when received.
+    '''
 
     # Python class constructor
     def __init__(self, host, port):
-        super(SecurityNode, self).__init__(host, port, None)
+        super(SecureNode, self).__init__(host, port, None)
 
         # Track the discovery message that are recieved, so we know when to stop!
         self.discovery_messages = {}
