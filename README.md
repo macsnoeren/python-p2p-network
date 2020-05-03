@@ -202,7 +202,15 @@ node.stop()
 
 # Node class                                       
 
-TODO: Documentation around the functions that can be used. You could look into the code.
+````Node.send_to_nodes(data)````
+    
+Data can be:  
+Pure Text => str object  
+Json => dict object will be decode  
+Bytes => bytes object standard socket communication  
+
+**Note:  We put 0x04 uft-8/ascii char that indicates EOT (end of transmission)**
+
 
 # NodeConnection class                                       
 
