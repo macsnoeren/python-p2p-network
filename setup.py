@@ -4,7 +4,7 @@ with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setuptools.setup(
-    name="p2pnet-macsnoeren",
+    name="p2pnetwork-macsnoeren",
     version="0.0.1",
     author="Maurice Snoeren",
     author_email="macsnoeren@gmail.com",
@@ -15,7 +15,7 @@ setuptools.setup(
     packages=setuptools.find_packages(),
     classifiers=[
         "Programming Language :: Python :: 3",
-        "License :: GNU 3 License",
+        "License :: GNU License",
         "Operating System :: OS Independent",
     ],
     python_requires='>=3.6',

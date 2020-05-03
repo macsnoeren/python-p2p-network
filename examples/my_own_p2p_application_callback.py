@@ -11,7 +11,7 @@ import sys
 import time
 sys.path.insert(0, '..') # Import the files where the modules are located
 
-from p2pnet import Node
+from p2pnetwork import Node
 
 # The big callback method that gets all the events that happen inside the p2p network.
 # Implement here your own application logic. The event holds the event that occurred within
