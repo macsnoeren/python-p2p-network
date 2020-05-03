@@ -40,7 +40,7 @@ while running:
         running = False
 
     elif s == "message":
-        node.send_message("Hoi daar!")
+        node.send_message(input("Message to send:"))
 
     elif s == "ping":
         node.send_ping()
