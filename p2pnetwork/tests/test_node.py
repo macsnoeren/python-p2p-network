@@ -81,8 +81,9 @@ class TestNode(unittest.TestCase):
         node1.join()
         node2.join()
 
-        self.assertEqual("node_message:" + node2.id + ":" + node1.id + ":Hi from node1!", node1_message)
-        self.assertEqual("node_message:" + node1.id + ":" + node2.id + ":Hi from node2!", node2_message)
+        self.maxDiff = None
+        self.assertEqual("node_message:" + node2.id + ":" + node1.id + ":Hi from node 1!", node1_message, "The message is not correctly received by node 2")
+        self.assertEqual("node_message:" + node1.id + ":" + node2.id + ":Hi from node 2!", node2_message, "The message is not correctly received by node 1")
 
 # TODO: event check using the callback function?!
 # TODO: class implementation check?!
