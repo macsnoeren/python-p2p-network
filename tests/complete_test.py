@@ -43,7 +43,11 @@ if __name__ == '__main__':
 
     time.sleep(2)
     print('propagate a message node 2 -> (all) node 0 -> node 1')
-    node_2.send_to_nodes({'data': 'hello sender are node 2', 'op': 'propagation'})
+    node_1.debug = True
+    node_2.send_to_nodes({'data': 'hello, sender are node 2', 'op': 'propagation'})
+
+    time.sleep(5)
+    print('stoping...')
 
     node_0.stop()
     node_1.stop()

@@ -8,6 +8,10 @@ import time
 import threading
 import random
 import hashlib
+import json
+
+EOT_CHAR = 0x04.to_bytes(1, 'big')
+
 
 class Node(threading.Thread):
     __doc__ = '''
@@ -15,6 +19,7 @@ class Node(threading.Thread):
     Implements a node that is able to connect to other nodes and is able to accept connections from other nodes.
     After instantiation, the node creates a TCP/IP server with the given port.
     '''
+
     def __init__(self, host, port, callback):
         super(Node, self).__init__()
 
@@ -92,13 +97,6 @@ class Node(threading.Thread):
                 n.join()
                 del self.nodes_outbound[self.nodes_inbound.index(n)]
 
-    # Obsolete, while this defines that we use JSON formatted message, it is up to the programmer how to deal with this!
-    # Will be deleted in the future!
-    #def create_message(self, data):
-    #    data['_mcs'] = self.message_count_send
-    #    data['_mcr'] = self.message_count_recv
-    #    return data
-
     # Send a message to all the nodes that are connected with this node.
     # data is a python variable which is converted to JSON that is send over to the other node.
     # exclude list gives all the nodes to which this data should not be sent.
@@ -123,8 +121,6 @@ class Node(threading.Thread):
         self.delete_closed_connections()
         if n in self.nodes_inbound or n in self.nodes_outbound:
             try:
-                #Obsolete while this uses JSON format, the user of the module decide what to do!
-                #n.send(self.create_message(data))
                 n.send(data)
 
             except Exception as e:
@@ -153,7 +149,7 @@ class Node(threading.Thread):
 
             # Basic information exchange (not secure) of the id's of the nodes!
             sock.send(self.id.encode('utf-8')) # Send my id to the connected node!
-            connected_node_id = str(sock.recv(4096).decode('utf-8')) # When a node is connected, it sends it id!
+            connected_node_id = sock.recv(4096).decode('utf-8') # When a node is connected, it sends it id!
 
             thread_client = self.create_new_connection(sock, connected_node_id, host, port)
             thread_client.start()
@@ -292,101 +288,86 @@ class NodeConnection(threading.Thread):
         self.sock = sock
         self.terminate_flag = threading.Event()
 
-        # Variable for parsing the incoming json messages
-        self.buffer = ""
-
         # The id of the connected node
         self.id = id
 
         self.main_node.debug_print(
             "NodeConnection.send: Started with client (" + self.id + ") '" + self.host + ":" + str(self.port) + "'")
 
-    # Send data to the node. The data should be a python variable
-    # This data is converted into json and send. When you want to create a message
-    # to be send, please use self.create_message(data)
-    def send(self, data):
-        try:
-            # Obsolete, it uses JSON, while the user of the module could decide whether to use JSON.
-            #message = json.dumps(data, separators=(',', ':')) + "-TSN"
-            #self.sock.sendall(message.encode('utf-8'))
-            data = data + "-TSN"
-            self.sock.sendall(data.encode('utf-8'))
-
-        except Exception as e:
-            self.main_node.debug_print("NodeConnection.send: Unexpected error:", sys.exc_info()[0])
-            self.main_node.debug_print("Exception: " + str(e))
-            self.terminate_flag.set()
-
-    # This method should be implemented by yourself! We do not know when the message is
-    # correct.
-    # def check_message(self, data):
-    #         return True
+    # Send data to the node. To be send, please use self.Node.send_to_nodes(data, str_encode_type='utf-8')
+    def send(self, data, str_encode_type='utf-8'):
+        if isinstance(data, str):
+            str_data = data.encode(str_encode_type) + EOT_CHAR
+            self.sock.sendall(str_data)
+        elif isinstance(data, dict):
+            try:
+                json_data = json.dumps(data)
+                json_data = json_data.encode(str_encode_type) + EOT_CHAR
+                self.sock.sendall(json_data)
+            except TypeError as type_error:
+                print()
+                self.main_node.debug_print('This dict is invalid')
+                self.main_node.debug_print(type_error)
+            except Exception as e:
+                print('Unexpected Error in send message')
+                print(e)
+        elif isinstance(data, bytes):
+            bin_data = data + EOT_CHAR
+            self.sock.sendall(bin_data)
+        else:
+            self.main_node.debug_print('datatype used is not valid plese use str, dict (will be send as json) or bytes')
 
     # Stop the node client. Please make sure you join the thread.
     def stop(self):
         self.terminate_flag.set()
 
+    @staticmethod
+    def parse_msg(msg):
+        try:
+            msg_decoded = msg.decode('utf-8')
+            try:
+                msg_json = json.loads(msg_decoded)
+                return msg_json
+            except json.decoder.JSONDecodeError:
+                return msg_decoded
+        except UnicodeDecodeError:
+            return msg
+
     # Required to implement the Thread. This is the main loop of the node client.
     def run(self):
         # Timeout, so the socket can be closed when it is dead!
-        self.sock.settimeout(10.0)          
- 
-        while not self.terminate_flag.is_set():  # Check whether the thread needs to be closed
-            line = ""
+        self.sock.settimeout(10.0)
+        buffer = b''
+
+        # Check whether the thread needs to be closed
+        while not self.terminate_flag.is_set():
             try:
-                line = self.sock.recv(4096)  # the line ends with -TSN\n
-
+                chunk = self.sock.recv(4096)
             except socket.timeout:
-                self.main_node.debug_print("NodeConnection: timeout")
-
+                self.main_node.debug_print('NodeConnection: timeout')
+                chunk = b''
             except Exception as e:
                 self.terminate_flag.set()
-                self.main_node.debug_print("NodeConnection: Socket has been terminated (%s)" % line)
+                self.main_node.debug_print('Unexpected error')
                 self.main_node.debug_print(e)
+                chunk = b''
 
-            if line != "":
-                try:
-                    self.buffer += str(line.decode('utf-8'))
-
-                except Exception as e:
-                    print("NodeConnection: Decoding line error | " + str(e))
-
-                # Get the messages
-                index = self.buffer.find("-TSN")
-                while index > 0:
-                    message = self.buffer[0:index]
-                    self.buffer = self.buffer[index + 4::]
-
-                    self.main_node.message_count_recv += 1
-                    self.main_node.node_message(self, message)
-
-                    # Obsolete code that pinned down the user of the module to use JSON!
-                    #try:
-                    #    data = json.loads(message)
-                    #
-                    #except Exception as e:
-                    #    self.main_node.debug_print("NodeConnection: Data could not be parsed (%s) (%s)" % (line, str(e)))
-                    #
-                    #if self.check_message(data):
-                    #    self.main_node.message_count_recv += 1
-                    #    self.main_node.node_message(self, data)
-                    #
-                    #else:
-                    #    self.main_node.messgaE_count_rerr += 1
-                    #    self.main_node.debug_print("-------------------------------------------")
-                    #    self.main_node.debug_print("Message is damaged and not correct:\nMESSAGE:")
-                    #    self.main_node.debug_print(message)
-                    #    self.main_node.debug_print("DATA:")
-                    #    self.main_node.debug_print(str(data))
-                    #    self.main_node.debug_print("-------------------------------------------")
-
-                    index = self.buffer.find("-TSN")
+            buffer += chunk
+            cut_point = buffer.find(EOT_CHAR)
+            while cut_point > 0:
+                msg = buffer[:cut_point]
+                buffer = buffer[cut_point + 1:]
+                # Parse to pure text, json dict or bytes
+                data = self.parse_msg(msg)
+                self.main_node.message_count_recv += 1
+                self.main_node.node_message(self, data)
+                cut_point = buffer.find(EOT_CHAR)
 
             time.sleep(0.01)
 
         self.sock.settimeout(None)
         self.sock.close()
-        self.main_node.debug_print("NodeConnection: Stopped")
+        self.main_node.debug_print('NodeConnection: Stopped')
 
     def __str__(self):
         return 'NodeConnection: {}:{} <-> {}:{} ({})'.format(self.main_node.host, self.main_node.port, self.host, self.port, self.id)
