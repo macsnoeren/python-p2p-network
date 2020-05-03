@@ -3,15 +3,6 @@ import time
 
 from p2pnetwork.node import Node
 
-message = ""
-
-def node_callback(event, main_node, connected_node, data):
-    try:
-        message = event + ":" + main_node.id + ":" + connected_node.id + ":" + data
-
-    except Exception as e:
-        message = "exception"
-
 class TestNode(unittest.TestCase):
     """Testing the Node class."""
 
@@ -54,6 +45,19 @@ class TestNode(unittest.TestCase):
         self.assertEqual(total_nodes_outbound_2, 0, "The node 2 should not have any outbound nodes.")
 
     def test_node_communication(self):
+        """Test whether the connected nodes are able to send messages to each other."""
+        global message
+        message = "unknown"
+
+        def node_callback(event, main_node, connected_node, data):
+            global message
+            try:
+                if event == "node_message":
+                    message = event + ":" + main_node.id + ":" + connected_node.id + ":" + str(data)
+
+            except Exception as e:
+                message = "exception: " + str(e) 
+
         node1 = Node("localhost", 10001, node_callback)
         node2 = Node("localhost", 10002, node_callback)
 
@@ -65,15 +69,23 @@ class TestNode(unittest.TestCase):
         time.sleep(2)
 
         node1.send_to_nodes("Hi from node 1!")
-        print(message)
+        time.sleep(1)
+        node1_message = message
 
         node2.send_to_nodes("Hi from node 2!")
-        print(message)
+        time.sleep(1)
+        node2_message = message
 
         node1.stop()
         node2.stop()
         node1.join()
         node2.join()
+
+        self.assertEqual("node_message:" + node2.id + ":" + node1.id + ":Hi from node1!", node1_message)
+        self.assertEqual("node_message:" + node1.id + ":" + node2.id + ":Hi from node2!", node2_message)
+
+# TODO: event check using the callback function?!
+# TODO: class implementation check?!
 
 if __name__ == '__main__':
     unittest.main()
