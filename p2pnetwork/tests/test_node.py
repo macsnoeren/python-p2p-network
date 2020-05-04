@@ -164,7 +164,6 @@ class TestNode(unittest.TestCase):
         node_2.stop()
 
         # Perform the asserts!
-        self.maxDiff = None
         self.assertEqual(step_1_node_0_total_connections, 1, "Node 0 should have one outbound connection.")
         self.assertEqual(step_1_node_0_connection_node, node_1.id + ":127.0.0.1:8001", "Node 0 should be connected (outbound) with node 1.")
         self.assertEqual(step_1_node_1_total_connections, 1, "Node 1 should have one inbound connection.")
@@ -182,7 +181,76 @@ class TestNode(unittest.TestCase):
         self.assertEqual(message[2], "node_message:" + node_0.id + ":" + node_1.id + ":hello from node 1", "Node 0 should have received a message from node 1")
         self.assertEqual(message[3], "node_message:" + node_0.id + ":" + node_2.id + ":hello from node 2", "Node 0 should have received a message from node 2")
 
-# TODO: event check using the callback function?!
+    def test_node_events(self):
+        """Testing the events that are triggered by the Node."""
+
+        global message
+        message = []
+
+        # Using the callback we are able to see the events and messages of the Node
+        def node_callback(event, main_node, connected_node, data):
+            global message
+            message.append(event + ":" + main_node.id)                
+
+        node_0 = Node('127.0.0.1', 8000, node_callback)
+        node_1 = Node('127.0.0.1', 8001, node_callback)
+        node_2 = Node('127.0.0.1', 8002, node_callback)
+
+        node_0.start()
+        node_1.start()
+        node_2.start()
+        time.sleep(1)
+
+        # Test the connections
+        node_0.connect_with_node('127.0.0.1', 8001)
+        time.sleep(2)
+
+        node_2.connect_with_node('127.0.0.1', 8000)
+        time.sleep(2)
+
+        # Send messages
+        node_0.send_to_nodes('hello from node 0')
+        time.sleep(2)
+
+        node_1.send_to_nodes('hello from node 1')
+        time.sleep(2)
+
+        node_2.send_to_nodes('hello from node 2')
+        time.sleep(2)
+
+        node_0.stop()
+        node_1.stop()
+        node_2.stop()
+
+        print(str(message))
+
+        # Perform the asserts!
+        self.maxDiff = None
+        self.assertTrue(len(message) > 0, "There should have been sent some messages around!")
+        self.assertTrue(len(message) == 11, "There should have been sent 4 message around!")
+
+        if "outbound" in message[0]:
+            self.assertEqual(message[0],  "outbound_node_connected:" + node_0.id, "Event should have occurred")
+            self.assertEqual(message[1],  "inbound_node_connected:" + node_1.id, "Event should have occurred")
+        else:
+            self.assertEqual(message[1],  "outbound_node_connected:" + node_0.id, "Event should have occurred")
+            self.assertEqual(message[0],  "inbound_node_connected:" + node_1.id, "Event should have occurred")
+        
+        if "outbound" in message[2]:
+            self.assertEqual(message[2],  "outbound_node_connected:" + node_2.id, "Event should have occurred")
+            self.assertEqual(message[3],  "inbound_node_connected:" + node_0.id, "Event should have occurred")
+        else:
+            self.assertEqual(message[3],  "outbound_node_connected:" + node_2.id, "Event should have occurred")
+            self.assertEqual(message[2],  "inbound_node_connected:" + node_0.id, "Event should have occurred")
+
+        self.assertEqual(message[4],  "node_message:" + node_2.id, "Event should have occurred")
+        self.assertEqual(message[5],  "node_message:" + node_1.id, "Event should have occurred")
+        self.assertEqual(message[6],  "node_message:" + node_0.id, "Event should have occurred")
+        self.assertEqual(message[7],  "node_message:" + node_0.id, "Event should have occurred")
+        self.assertEqual(message[8],  "node_request_to_stop:" + node_0.id, "Event should have occurred")
+        self.assertEqual(message[9],  "node_request_to_stop:" + node_1.id, "Event should have occurred")
+        self.assertEqual(message[10], "node_request_to_stop:" + node_2.id, "Event should have occurred")
+
 # TODO: class implementation check?!
 
 if __name__ == '__main__':
