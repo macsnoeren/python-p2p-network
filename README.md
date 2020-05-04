@@ -1,24 +1,17 @@
 # Python implementation of a peer-to-peer decentralized network
-This project provides a basic and simple peer-to-peer decentralized network
-classes to build your own network. Basic functionality of the nodes and the
-connection to and from these nodes have been implemented. Application
-specific functionality is up to you to implement yourself. The intention of
-the module is to provide a good basis, without specific implementation, so
-everyone is really free to implement like they would like to do.
+This project provides a basic and simple peer-to-peer decentralized network classes (framework) to build your own network. Basic functionality of the nodes and the connection to and from these  nodes have been implemented. Application specific functionality is up to you to implement yourself. The intention of the module is to provide a good basis, without specific  implementation, so everyone is really free to implement like they would like to do.
 
-You can use the project to implement a peer-to-peer decentralized network
-application, like Bitcoin or file sharing applications. I have used this
-software to provide my students, during a technical introduction to 
-Blockchain, basic functionality. So, they were able to focus on how they
-would like to implement the Blockchain functionality and protocols. Without
-some direction from my side. Some of the students have used the code base
-to implement their application in C# or C++ for example. That is the
-freedom I would like to give to everyone.
+You can use the project to implement a peer-to-peer decentralized network application, like Bitcoin or file sharing applications. I have used this software to provide my students, during a technical introduction to Blockchain, basic functionality. So, they were able to focus on how they would like to implement the Blockchain functionality and protocols. Without some direction from my side. Some of the students have used the code base to implement their application in C# or C++ for example. That is the freedom I would like to give to everyone.
+
+To install the package for you to use:
+````
+pip install p2pnetwork
+````
 
 # Evolution of the software
-While I started this project in the year 2018, it was mainly focussed to provide my students some software to be able to implement a peer-to-peer decentralized network. Without the hassle to design and create everything by themselves. While I did not had any experience with Python yet and there was not much time, I put everything in place in a very large pace. One of my students was annoyed by the camelCase programming style, while the Python community uses PEP. So, Christian decided to help me out and structured the software to the PEP style. Two years later, Samuel decided to clean up the code and create a real module from it. From then, I decided to jump in again and made the proposed changes, while maintaining the intention of the software: basic peer-to-peer decentralized functionality without specific implementation of protocols, so the programmer is able to freely implement these on their own. I still think that the software is a good basis and already have a new goal to use this software for a decentralized security application. 
+While I started this project in the year 2018, it was mainly focussed to provide my students some software to be able to implement a peer-to-peer decentralized network. Without the hassle to design and create everything by themselves. While I did not had any experience with Python yet and there was not much time, I put everything in place in a very large pace. One of my students was annoyed by the camelCase programming style, while the Python community uses PEP-8. So, Christian decided to help me out and structured the software to the PEP style. Two years later, Samuel decided to clean up the code and create a real module from it. From then, I decided to jump in again and made the proposed changes, while maintaining the intention of the software: basic peer-to-peer decentralized functionality without specific implementation of protocols, so the programmer is able to freely implement these on their own. I still think that the software is a good basis and already have a new goal to use this software for a decentralized security application.
 
-Anyway, thanks for all the collaboration and I hope your will still help me out and others will join as well. It is possible to develop more specific applications by other modules and classes. Adding these to the repository will create a nice overview about the possibilities of these kind of applications.
+On github I was wondering around and noticed that others contributed as well to the code. No pull request, but still nice things. Therefore, I have not transformed the python software to a package to be available on pypi.org. Anyway, thanks for all the collaboration and I hope your will still help me out and others will join as well. It is possible to develop more specific applications by other modules and classes. Adding these to the repository will create a nice overview about the possibilities of these kind of applications.
 
 # Design
 At first glance, peer-to-peer decentralized network applications are complex and difficult. While you need to provide some networking functionality on application level, the architecture is really simple. You have a network of the "same" nodes. The "same" means the same application (or an application that implements the same protocol).
@@ -42,7 +35,7 @@ Two examples have been provided to show how both could be implemented: my_own_p2
 While this is the least prefferable method, you are in the lead! You need to create a callback method and spin off the Node from the module p2pnet. All events that happen within the network, will be transferred to the callback function. All application specific functionality can be implemented within this callback and the methods provided by the classes Node and NodeConnection. See below an example of an implemenation.
 
 ````python
-from p2pnet import Node
+from p2pnetwork import Node
 
 # node_callback
 #  event         : event name
@@ -108,7 +101,7 @@ To implement your p2p network application, you could also extend the classes Nod
 Extending the class Node is easy. Make sure you override at least all the events. Whenever, you extend the class, it is not possible to use the callback function anymore. See the example below.
 
 ````python
-from p2pnet import Node
+from p2pnetwork import Node
 
 class MyOwnPeer2PeerNode (Node):
     # Python class constructor
@@ -147,7 +140,7 @@ class MyOwnPeer2PeerNode (Node):
 The NodeConnection class only hold the TCP/IP connection with the other node, to manage the different connection to and from the main node. It does not implement application specific elements. Mostly, you will only need to extend the Node class. However, when you would like to create an own NodeConnection class you can do this. Make sure that you override ````create_new_connection(self, connection, id, host, port)```` in the class Node, to make sure you initiate your own NodeConnection class. The example below shows some example.
 
 ````python
-from p2pnet import Node
+from p2pnetwork import Node
 
 class MyOwnPeer2PeerNode (Node):
     # Python class constructor
@@ -200,15 +193,26 @@ time.sleep(5) # Create here your main loop of the application
 node.stop()
 ````
 
-# Node class                                       
+# Examples
 
-TODO: Documentation around the functions that can be used. You could look into the code.
+Examples are available in the github repository of this project: https://github.com/macsnoeren/python-p2p-network. 
 
-# NodeConnection class                                       
+# Node and NodeConnection class                                       
 
-TODO: Documentation around the functions that can be used. You could look into the code.
+See the Python documentation for these classes.
 
-# Show case: SecurityNode
-As show case, I implement a SecurityNode that uses JSON to communicate between the nodes. It extends from the p2pnet.Node class and implements a protocol to implement application specific functionality. While I do not know yet what to implement, I already have implemented a ping-pong, message and discovery handling. The discovery function receives from every node a list of nodes they are connected to. 
+# Show case: SecureNode
+As show case, I have created the SecureNode class that extends the Node class. This node uses JSON, hashing and signing to communicate between the nodes. My main thought with this secure node is to be able to exchange data securely with each other and give others permissions to read the data for example. You are the owner of your data! Anyway, some project that I am currently working on. See the documentation of this specific class file.
 
-My main thought with the security node is to be able to security store and verify data to the network. Another idea is that you can share your "private" data with others. You are the owner of your data!
+````python
+import sys
+import time
+
+from p2pnetwork.securenode import SecureNode
+
+node = SecureNode("127.0.0.1", 8001)
+time.sleep(1)
+
+node.start()
+````
+An example node that uses SecureNode class is found in the example directory on github: ````secure_node.py````.
