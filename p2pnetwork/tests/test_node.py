@@ -162,6 +162,9 @@ class TestNode(unittest.TestCase):
         node_0.stop()
         node_1.stop()
         node_2.stop()
+        node_0.join()
+        node_1.join()
+        node_2.join()
 
         # Perform the asserts!
         self.assertEqual(step_1_node_0_total_connections, 1, "Node 0 should have one outbound connection.")
@@ -221,11 +224,13 @@ class TestNode(unittest.TestCase):
         node_0.stop()
         node_1.stop()
         node_2.stop()
+        node_0.join()
+        node_1.join()
+        node_2.join()
 
         print(str(message))
 
         # Perform the asserts!
-        self.maxDiff = None
         self.assertTrue(len(message) > 0, "There should have been sent some messages around!")
         self.assertTrue(len(message) == 11, "There should have been sent 4 message around!")
 
@@ -251,7 +256,106 @@ class TestNode(unittest.TestCase):
         self.assertEqual(message[9],  "node_request_to_stop:" + node_1.id, "Event should have occurred")
         self.assertEqual(message[10], "node_request_to_stop:" + node_2.id, "Event should have occurred")
 
-# TODO: class implementation check?!
+    def test_extending_class_of_node(self):
+        """Testing the class implementation of the Node."""
+
+        global message
+        message = []
+
+        class MyTestNode (Node):
+            def __init__(self, host, port):
+                super(MyTestNode, self).__init__(host, port, None)
+                global message
+                message.append("mytestnode started")
+
+            def outbound_node_connected(self, node):
+                global message
+                message.append("outbound_node_connected: " + node.id)
+                
+            def inbound_node_connected(self, node):
+                global message
+                message.append("inbound_node_connected: " + node.id)
+
+            def inbound_node_disconnected(self, node):
+                global message
+                message.append("inbound_node_disconnected: " + node.id)
+
+            def outbound_node_disconnected(self, node):
+                global message
+                message.append("outbound_node_disconnected: " + node.id)
+
+            def node_message(self, node, data):
+                global message
+                message.append("node_message from " + node.id + ": " + str(data))
+                
+            def node_disconnect_with_outbound_node(self, node):
+                global message
+                message.append("node wants to disconnect with oher outbound node: " + node.id)
+                
+            def node_request_to_stop(self):
+                global message
+                message.append("node is requested to stop!")
+
+        node1 = MyTestNode("127.0.0.1", 8001)
+        node2 = MyTestNode("127.0.0.1", 8002)
+        node3 = MyTestNode("127.0.0.1", 8003)
+
+        node1.start()
+        node2.start()
+        node3.start()
+
+        node1.connect_with_node('127.0.0.1', 8002)
+        time.sleep(2)
+
+        node3.connect_with_node('127.0.0.1', 8001)
+        time.sleep(2)
+
+        # Send messages
+        node1.send_to_nodes('hello from node 1')
+        time.sleep(2)
+
+        node2.send_to_nodes('hello from node 2')
+        time.sleep(2)
+
+        node3.send_to_nodes('hello from node 3')
+        time.sleep(2)
+
+        node1.stop()
+        node2.stop()
+        node3.stop()
+        node1.join()
+        node2.join()
+        node3.join()
+
+        self.assertTrue(len(message) > 0, "There should have been sent some messages around!")
+        self.assertTrue(len(message) == 14, "There should have been sent 14 message around!")
+
+        self.assertEqual(message[0],  "mytestnode started", "MyTestNode should have seen this event!")
+        self.assertEqual(message[1],  "mytestnode started", "MyTestNode should have seen this event!")
+        self.assertEqual(message[2],  "mytestnode started", "MyTestNode should have seen this event!")
+
+        if "inbound" in message[3]:
+            self.assertEqual(message[3],  "inbound_node_connected: " + node1.id, "MyTestNode should have seen this event!")
+            self.assertEqual(message[4],  "outbound_node_connected: " + node2.id, "MyTestNode should have seen this event!")
+        else:
+            self.assertEqual(message[4],  "inbound_node_connected: " + node1.id, "MyTestNode should have seen this event!")
+            self.assertEqual(message[3],  "outbound_node_connected: " + node2.id, "MyTestNode should have seen this event!")
+
+        if "outbound" in message[5]:
+            self.assertEqual(message[5],  "outbound_node_connected: " + node1.id, "MyTestNode should have seen this event!")
+            self.assertEqual(message[6],  "inbound_node_connected: " + node3.id, "MyTestNode should have seen this event!")
+        else:
+            self.assertEqual(message[6],  "outbound_node_connected: " + node1.id, "MyTestNode should have seen this event!")
+            self.assertEqual(message[5],  "inbound_node_connected: " + node3.id, "MyTestNode should have seen this event!")
+
+        self.assertEqual(message[7],  "node_message from " + node1.id + ": hello from node 1", "MyTestNode should have seen this event!")
+        self.assertEqual(message[8],  "node_message from " + node1.id + ": hello from node 1", "MyTestNode should have seen this event!")
+        self.assertEqual(message[9],  "node_message from " + node2.id + ": hello from node 2", "MyTestNode should have seen this event!")
+        self.assertEqual(message[10],  "node_message from " + node3.id + ": hello from node 3", "MyTestNode should have seen this event!")
+
+        self.assertEqual(message[11],  "node is requested to stop!", "MyTestNode should have seen this event!")
+        self.assertEqual(message[12],  "node is requested to stop!", "MyTestNode should have seen this event!")
+        self.assertEqual(message[13],  "node is requested to stop!", "MyTestNode should have seen this event!")
 
 if __name__ == '__main__':
     unittest.main()
