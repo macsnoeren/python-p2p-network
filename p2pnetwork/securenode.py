@@ -8,7 +8,7 @@ from Crypto.Signature import PKCS1_v1_5 as PKCS1_v1_5_Signature
 from Crypto.Hash import SHA512
 from base64 import b64decode, b64encode
 
-from p2pnet.node import Node
+from p2pnetwork.node import Node
 
 """
 Author : Maurice Snoeren <macsnoeren(at)gmail.com>

@@ -11,7 +11,7 @@ import sys
 import time
 sys.path.insert(0, '..') # Import the files where the modules are located
 
-from SecurityNode import SecurityNode
+from p2pnetwork.SecurityNode import SecurityNode
 
 port = 9001
 if len(sys.argv) > 1:

@@ -5,7 +5,7 @@ import threading
 import random
 import hashlib
 
-from p2pnet.nodeconnection import NodeConnection
+from p2pnetwork.nodeconnection import NodeConnection
 
 """
 Author: Maurice Snoeren <macsnoeren(at)gmail.com>
