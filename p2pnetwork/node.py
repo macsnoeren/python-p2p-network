@@ -9,7 +9,8 @@ from p2pnetwork.nodeconnection import NodeConnection
 
 """
 Author: Maurice Snoeren <macsnoeren(at)gmail.com>
-Version: 0.2 beta (use at your own risk)
+Version: 0.3 beta (use at your own risk)
+Date: 7-5-2020
 
 Python package p2pnet for implementing decentralized peer-to-peer network applications
 
@@ -83,7 +84,7 @@ class Node(threading.Thread):
     def debug_print(self, message):
         """When the debug flag is set to True, all debug messages are printed in the console."""
         if self.debug:
-            print("DEBUG PRINT: " + message)
+            print("DEBUG: " + message)
 
     def init_server(self):
         """Initialization of the TCP/IP server to receive connections. It binds to the given host and port."""
@@ -137,8 +138,6 @@ class Node(threading.Thread):
         self.delete_closed_connections()
         if n in self.nodes_inbound or n in self.nodes_outbound:
             try:
-                #Obsolete while this uses JSON format, the user of the module decide what to do!
-                #n.send(self.create_message(data))
                 n.send(data)
 
             except Exception as e:
@@ -169,7 +168,7 @@ class Node(threading.Thread):
 
             # Basic information exchange (not secure) of the id's of the nodes!
             sock.send(self.id.encode('utf-8')) # Send my id to the connected node!
-            connected_node_id = str(sock.recv(4096).decode('utf-8')) # When a node is connected, it sends it id!
+            connected_node_id = sock.recv(4096).decode('utf-8') # When a node is connected, it sends it id!
 
             thread_client = self.create_new_connection(sock, connected_node_id, host, port)
             thread_client.start()
@@ -217,7 +216,7 @@ class Node(threading.Thread):
                 connection, client_address = self.sock.accept()
                 
                 # Basic information exchange (not secure) of the id's of the nodes!
-                connected_node_id = str(connection.recv(4096).decode('utf-8')) # When a node is connected, it sends it id!
+                connected_node_id = connection.recv(4096).decode('utf-8') # When a node is connected, it sends it id!
                 connection.send(self.id.encode('utf-8')) # Send my id to the connected node!
 
                 thread_client = self.create_new_connection(connection, connected_node_id, client_address[0], client_address[1])
