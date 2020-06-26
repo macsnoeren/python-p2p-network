@@ -35,6 +35,7 @@ Two examples have been provided to show how both could be implemented: my_own_p2
 While this is the least prefferable method, you are in the lead! You need to create a callback method and spin off the Node from the module p2pnet. All events that happen within the network, will be transferred to the callback function. All application specific functionality can be implemented within this callback and the methods provided by the classes Node and NodeConnection. See below an example of an implemenation.
 
 ````python
+import time
 from p2pnetwork import Node
 
 # node_callback
