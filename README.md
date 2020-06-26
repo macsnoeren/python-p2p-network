@@ -46,7 +46,7 @@ from p2pnetwork import Node
 def node_callback(event, node, connected_node, data):
     try:
         if event != 'node_request_to_stop': # node_request_to_stop does not have any connected_node, while it is the main_node that is stopping!
-            print('Event: {} from main node {}: connected node {}: {}'.format(event, main_node.id, connected_node.id, data))
+            print('Event: {} from main node {}: connected node {}: {}'.format(event, node.id, connected_node.id, data))
 
     except Exception as e:
         print(e)
