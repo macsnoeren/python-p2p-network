@@ -63,8 +63,8 @@ time.sleep(1)
 node.connect_with_node('127.0.0.1', 8002)
 time.sleep(2)
 
-# Send some message to the other nodes, json style is required!
-node.send_to_nodes({"message": "hoi from node 1"})
+# Send some message to the other nodes
+node.send_to_nodes("hoi from node 1")
 
 time.sleep(5) # Replace this sleep with your main loop!
 
