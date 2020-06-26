@@ -36,7 +36,7 @@ While this is the least prefferable method, you are in the lead! You need to cre
 
 ````python
 import time
-from p2pnetwork import Node
+from p2pnetwork.node import Node
 
 # node_callback
 #  event         : event name
