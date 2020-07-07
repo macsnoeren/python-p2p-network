@@ -35,7 +35,8 @@ Two examples have been provided to show how both could be implemented: my_own_p2
 While this is the least prefferable method, you are in the lead! You need to create a callback method and spin off the Node from the module p2pnet. All events that happen within the network, will be transferred to the callback function. All application specific functionality can be implemented within this callback and the methods provided by the classes Node and NodeConnection. See below an example of an implemenation.
 
 ````python
-from p2pnetwork import Node
+import time
+from p2pnetwork.node import Node
 
 # node_callback
 #  event         : event name
@@ -45,7 +46,7 @@ from p2pnetwork import Node
 def node_callback(event, node, connected_node, data):
     try:
         if event != 'node_request_to_stop': # node_request_to_stop does not have any connected_node, while it is the main_node that is stopping!
-            print('Event: {} from main node {}: connected node {}: {}'.format(event, main_node.id, connected_node.id, data))
+            print('Event: {} from main node {}: connected node {}: {}'.format(event, node.id, connected_node.id, data))
 
     except Exception as e:
         print(e)
@@ -62,8 +63,8 @@ time.sleep(1)
 node.connect_with_node('127.0.0.1', 8002)
 time.sleep(2)
 
-# Send some message to the other nodes, json style is required!
-node_1.send_to_nodes({"message": "hoi from node 1"})
+# Send some message to the other nodes
+node.send_to_nodes('{"message": "hoi from node 1"}')
 
 time.sleep(5) # Replace this sleep with your main loop!
 
