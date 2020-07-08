@@ -7,6 +7,7 @@ To install the package for you to use:
 ````
 pip install p2pnetwork
 ````
+See p2pnetwork in action https://github.com/macsnoeren/python-p2p-secure-node. This SecureNode implements a node that communicates securely between the nodes.
 
 # Evolution of the software
 While I started this project in the year 2018, it was mainly focussed to provide my students some software to be able to implement a peer-to-peer decentralized network. Without the hassle to design and create everything by themselves. While I did not had any experience with Python yet and there was not much time, I put everything in place in a very large pace. One of my students was annoyed by the camelCase programming style, while the Python community uses PEP-8. So, Christian decided to help me out and structured the software to the PEP style. Two years later, Samuel decided to clean up the code and create a real module from it. From then, I decided to jump in again and made the proposed changes, while maintaining the intention of the software: basic peer-to-peer decentralized functionality without specific implementation of protocols, so the programmer is able to freely implement these on their own. I still think that the software is a good basis and already have a new goal to use this software for a decentralized security application.
