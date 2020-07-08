@@ -50,6 +50,9 @@ class NodeConnection(threading.Thread):
         # End of transmission character for the network streaming messages.
         self.EOT_CHAR = 0x04.to_bytes(1, 'big')
 
+        # Datastore to store additional information concerning the node.
+        self.info = dict
+
         self.main_node.debug_print("NodeConnection.send: Started with client (" + self.id + ") '" + self.host + ":" + str(self.port) + "'")
 
     def send(self, data, encoding_type='utf-8'):
@@ -148,6 +151,12 @@ class NodeConnection(threading.Thread):
         self.sock.settimeout(None)
         self.sock.close()
         self.main_node.debug_print("NodeConnection: Stopped")
+
+    def set_info(self, key, value):
+        self.info[key] = value
+
+    def get_info(self, key):
+        return self.info[key]
 
     def __str__(self):
         return 'NodeConnection: {}:{} <-> {}:{} ({})'.format(self.main_node.host, self.main_node.port, self.host, self.port, self.id)
