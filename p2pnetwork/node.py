@@ -71,7 +71,7 @@ class Node(threading.Thread):
         # Message counters to make sure everyone is able to track the total messages
         self.message_count_send = 0
         self.message_count_recv = 0
-        self.messgaE_count_rerr = 0
+        self.message_count_rerr = 0
 
         # Debugging on or off!
         self.debug = False
@@ -89,6 +89,7 @@ class Node(threading.Thread):
     def init_server(self):
         """Initialization of the TCP/IP server to receive connections. It binds to the given host and port."""
         print("Initialisation of the Node on port: " + str(self.port) + " on node (" + self.id + ")")
+        self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.sock.bind((self.host, self.port))
         self.sock.settimeout(10.0)
         self.sock.listen(1)
@@ -249,6 +250,7 @@ class Node(threading.Thread):
         for t in self.nodes_outbound:
             t.join()
 
+        self.sock.settimeout(None)   
         self.sock.close()
         print("Node stopped")
 
