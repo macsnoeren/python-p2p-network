@@ -30,13 +30,13 @@ So, you have therefore two options:
 1. Implement your p2p application by extending Node and NodeConnection classes
 2. Implement your p2p application with one callback function
 
-Two examples have been provided to show how both could be implemented: my_own_p2p_application_callback.py and my_own_p2p_application.py. My preference is to extend the classes, so we could build on each other ideas in the future.
+Examples have been provided by the package. These files can be found in the examples directory. My preference is to extend the classes, so we could build on each other ideas in the future.
 
 ## Option 1: Implement your p2p application by extending Node and NodeConnection classes
 This option is preffered and gives the most flexibility. To implement your p2p network application, you could also extend the classes Node and/or NodeConnection. At least you need to extend the class Node with your own implementation. To implement the application specific functionality, you override the methods that represent the events. You are able to create different classes and methods to provide the code to implement the application protocol and functionality. While more files are involved an example is given by the next sections. 
 
-### Extending class Node
-Extending the class Node is easy. Make sure you override at least all the events. Whenever, you extend the class, it is not possible to use the callback function anymore. See the example below.
+### Extend class Node
+Extending the class Node is easy. Make sure you override at least all the events. Whenever, you extend the class, it is not possible to use the callback function anymore. See the example below. You can also check the file examples/MyOwnPeer2PeerNode.py.
 
 ````python
 from p2pnetwork.node import Node
@@ -69,7 +69,7 @@ class MyOwnPeer2PeerNode (Node):
 
     # OPTIONAL
     # If you need to override the NodeConection as well, you need to
-    # override this method as well! In this method, you can initiate
+    # override this method! In this method, you can initiate
     # you own NodeConnection class.
     def create_new_connection(self, connection, id, host, port):
         return MyOwnNodeConnection(self, connection, id, host, port)
@@ -93,18 +93,19 @@ class MyOwnPeer2PeerNode (Node):
 ````
 
 ````python
-from p2pnet import Node
+from p2pnetwork.nodeconnection import NodeConnection
 
 class MyOwnNodeConnection (NodeConnection):
     # Python class constructor
-    def __init__(self, connection, id, host, port):
-        super(MyOwnNodeConnection, self).__init__(connection, id, host, port)
+     def __init__(self, main_node, sock, id, host, port):
+        super(MyOwnNodeConnection, self).__init__(main_node, sock, id, host, port)
 
-    # Check yourself what you would like to change and override!
+    # Check yourself what you would like to change and override! See the 
+    # documentation
 ````
 
 ### Using your new classes
-You have extended the Node class and maybe also the NodeConnection class. The next aspect it to use your new p2p network application by using these classes. You create a new python file and start using your classes. See the example below.
+You have extended the Node class and maybe also the NodeConnection class. The next aspect it to use your new p2p network application by using these classes. You create a new python file and start using your classes. See the example below. Check the file example/my_own_p2p_application.py for this implementation.
 
 ````python
 import sys
@@ -132,7 +133,7 @@ node.stop()
 ````
 
 ## Option 2: Implement your p2p application with one callback function
-While this is the least prefferable method, you are in the lead! You need to create a callback method and spin off the Node from the module p2pnet. All events that happen within the network, will be transferred to the callback function. All application specific functionality can be implemented within this callback and the methods provided by the classes Node and NodeConnection. See below an example of an implemenation.
+While this is the least prefferable method, you are in the lead! You need to create a callback method and spin off the Node from the module p2pnet. All events that happen within the network, will be transferred to the callback function. All application specific functionality can be implemented within this callback and the methods provided by the classes Node and NodeConnection. See below an example of an implementation. You can check the file examples/my_own_p2p_application_callback.py for the full implementation.
 
 ````python
 import time
@@ -153,14 +154,14 @@ def node_callback(event, node, connected_node, data):
 
 # The main node that is able to make connections to other nodes
 # and accept connections from other nodes on port 8001.
-node = Node("127.0.0.1", 8001, node_callback)
+node = Node("127.0.0.1", 10001, node_callback)
 
 # Do not forget to start it, it spins off a new thread!
 node.start()
 time.sleep(1)
 
 # Connect to another node, otherwise you do not have any network.
-node.connect_with_node('127.0.0.1', 8002)
+node.connect_with_node('127.0.0.1', 10002)
 time.sleep(2)
 
 # Send some message to the other nodes
@@ -195,13 +196,22 @@ The application actively wants to disconnect the the outboud node, a node with w
 ### node_request_to_stop
 The main node, also the application, is stopping itself. Note that the variable connected_node is empty, while there is no connected node involved.
 
+# Debugging
+
+When thing go wrong, you could enable debug messages of the Node class. The class shows these messages in the console and show all the details what happens within the class. To enable debugging for a node, use the code example below.
+
+````python
+node = Node("127.0.0.1", 10001)
+node.debug = True
+````
+
 # Examples
 
-Examples are available in the github repository of this project: https://github.com/macsnoeren/python-p2p-network.
+Examples are available in the github repository of this project: https://github.com/macsnoeren/python-p2p-network. All examples can be found in the directory examples.
 
 # Node and NodeConnection class                                       
 
-See the Python documentation for these classes.
+See the Python documentation for all the details of these classes.
 
 # Show case: SecureNode
 As show case, I have created the SecureNode class that extends the Node class. This node uses JSON, hashing and signing to communicate between the nodes. My main thought with this secure node is to be able to exchange data securely with each other and give others permissions to read the data for example. You are the owner of your data! Anyway, some project that I am currently working on. See the documentation of this specific class file.
@@ -212,7 +222,7 @@ import time
 
 from p2pnetwork.securenode import SecureNode
 
-node = SecureNode("127.0.0.1", 8001)
+node = SecureNode("127.0.0.1", 10001)
 time.sleep(1)
 
 node.start()
