@@ -51,7 +51,7 @@ class NodeConnection(threading.Thread):
         self.EOT_CHAR = 0x04.to_bytes(1, 'big')
 
         # Datastore to store additional information concerning the node.
-        self.info = dict
+        self.info = {}
 
         self.main_node.debug_print("NodeConnection.send: Started with client (" + self.id + ") '" + self.host + ":" + str(self.port) + "'")
 
