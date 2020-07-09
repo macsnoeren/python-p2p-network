@@ -99,6 +99,8 @@ class TestNode(unittest.TestCase):
         node1.join()
         node2.join()
 
+        time.sleep(10)
+        
         self.assertEqual("node_message:" + node2.id + ":" + node1.id + ":Hi from node 1!", node1_message, "The message is not correctly received by node 2")
         self.assertEqual("node_message:" + node1.id + ":" + node2.id + ":Hi from node 2!", node2_message, "The message is not correctly received by node 1")
 
@@ -118,9 +120,9 @@ class TestNode(unittest.TestCase):
             except Exception as e:
                 message.append("exception: " + str(e))
 
-        node_0 = Node('127.0.0.1', 8000, node_callback)
-        node_1 = Node('127.0.0.1', 8001, node_callback)
-        node_2 = Node('127.0.0.1', 8002, node_callback)
+        node_0 = Node('127.0.0.1', 10000, node_callback)
+        node_1 = Node('127.0.0.1', 10001, node_callback)
+        node_2 = Node('127.0.0.1', 10002, node_callback)
 
         node_0.start()
         node_1.start()
@@ -128,14 +130,14 @@ class TestNode(unittest.TestCase):
         time.sleep(1)
 
         # Test the connections
-        node_0.connect_with_node('127.0.0.1', 8001)
+        node_0.connect_with_node('127.0.0.1', 10001)
         time.sleep(2)
 
         node_0_connections = node_0.nodes_outbound
         step_1_node_0_total_connections = len(node_0_connections) # should be 1
         step_1_node_0_connection_node = "none"
         if step_1_node_0_total_connections > 0:
-            step_1_node_0_connection_node = node_0_connections[0].id + ":" + node_0_connections[0].host + ":" + str(node_0_connections[0].port) # node1.id:127.0.0.1:8001
+            step_1_node_0_connection_node = node_0_connections[0].id + ":" + node_0_connections[0].host + ":" + str(node_0_connections[0].port) # node1.id:127.0.0.1:10001
 
         node_1_connections = node_1.nodes_inbound
         step_1_node_1_total_connections = len(node_1_connections)
@@ -143,14 +145,14 @@ class TestNode(unittest.TestCase):
         if step_1_node_1_total_connections > 0:
             step_1_node_1_connection_node = node_1_connections[0].id + ":" + node_1_connections[0].host # node0.id:127.0.0.1, inbound port is port of client
 
-        node_2.connect_with_node('127.0.0.1', 8000)
+        node_2.connect_with_node('127.0.0.1', 10000)
         time.sleep(2)
 
         node_2_connections = node_2.nodes_outbound
         step_2_node_2_total_connections = len(node_2_connections) # should be 1
         step_2_node_2_connection_node = "none"
         if step_2_node_2_total_connections > 0:
-            step_2_node_2_connection_node = node_2_connections[0].id + ":" + node_2_connections[0].host + ":" + str(node_2_connections[0].port) # node0.id:127.0.0.1:8000
+            step_2_node_2_connection_node = node_2_connections[0].id + ":" + node_2_connections[0].host + ":" + str(node_2_connections[0].port) # node0.id:127.0.0.1:10000
 
         node_0_connections = node_0.nodes_inbound
         step_2_node_0_total_connections = len(node_2_connections) # should be 1
@@ -174,15 +176,15 @@ class TestNode(unittest.TestCase):
         node_0.join()
         node_1.join()
         node_2.join()
-
+       
         # Perform the asserts!
         self.assertEqual(step_1_node_0_total_connections, 1, "Node 0 should have one outbound connection.")
-        self.assertEqual(step_1_node_0_connection_node, node_1.id + ":127.0.0.1:8001", "Node 0 should be connected (outbound) with node 1.")
+        self.assertEqual(step_1_node_0_connection_node, node_1.id + ":127.0.0.1:10001", "Node 0 should be connected (outbound) with node 1.")
         self.assertEqual(step_1_node_1_total_connections, 1, "Node 1 should have one inbound connection.")
         self.assertEqual(step_1_node_1_connection_node, node_0.id + ":127.0.0.1", "Node 1 should be connected (inbound) with node 0.")
 
         self.assertEqual(step_2_node_2_total_connections, 1, "Node 2 shoud have one outbound connection.")
-        self.assertEqual(step_2_node_2_connection_node, node_0.id + ":127.0.0.1:8000", "Node 2 should be connected (outbound) with node 0.")
+        self.assertEqual(step_2_node_2_connection_node, node_0.id + ":127.0.0.1:10000", "Node 2 should be connected (outbound) with node 0.")
         self.assertEqual(step_2_node_0_total_connections, 1, "Node 0 should have one inbound connection.")
         self.assertEqual(step_2_node_0_connection_node, node_2.id + ":127.0.0.1", "Node 0 should be connected (inbound) with node 2.")
 
@@ -204,9 +206,9 @@ class TestNode(unittest.TestCase):
             global message
             message.append(event + ":" + main_node.id)                
 
-        node_0 = Node('127.0.0.1', 8000, node_callback)
-        node_1 = Node('127.0.0.1', 8001, node_callback)
-        node_2 = Node('127.0.0.1', 8002, node_callback)
+        node_0 = Node('127.0.0.1', 10000, node_callback)
+        node_1 = Node('127.0.0.1', 10001, node_callback)
+        node_2 = Node('127.0.0.1', 10002, node_callback)
 
         node_0.start()
         node_1.start()
@@ -214,10 +216,10 @@ class TestNode(unittest.TestCase):
         time.sleep(1)
 
         # Test the connections
-        node_0.connect_with_node('127.0.0.1', 8001)
+        node_0.connect_with_node('127.0.0.1', 10001)
         time.sleep(2)
 
-        node_2.connect_with_node('127.0.0.1', 8000)
+        node_2.connect_with_node('127.0.0.1', 10000)
         time.sleep(2)
 
         # Send messages
@@ -257,8 +259,13 @@ class TestNode(unittest.TestCase):
             self.assertEqual(message[3],  "outbound_node_connected:" + node_2.id, "Event should have occurred")
             self.assertEqual(message[2],  "inbound_node_connected:" + node_0.id, "Event should have occurred")
 
-        self.assertEqual(message[4],  "node_message:" + node_2.id, "Event should have occurred")
-        self.assertEqual(message[5],  "node_message:" + node_1.id, "Event should have occurred")
+        if  node_2.id in message[4]:
+            self.assertEqual(message[4],  "node_message:" + node_2.id, "Event should have occurred")
+            self.assertEqual(message[5],  "node_message:" + node_1.id, "Event should have occurred")
+        else:
+            self.assertEqual(message[5],  "node_message:" + node_2.id, "Event should have occurred")
+            self.assertEqual(message[4],  "node_message:" + node_1.id, "Event should have occurred")
+
         self.assertEqual(message[6],  "node_message:" + node_0.id, "Event should have occurred")
         self.assertEqual(message[7],  "node_message:" + node_0.id, "Event should have occurred")
         self.assertEqual(message[8],  "node_request_to_stop:" + node_0.id, "Event should have occurred")
@@ -305,18 +312,18 @@ class TestNode(unittest.TestCase):
                 global message
                 message.append("node is requested to stop!")
 
-        node1 = MyTestNode("127.0.0.1", 8001)
-        node2 = MyTestNode("127.0.0.1", 8002)
-        node3 = MyTestNode("127.0.0.1", 8003)
+        node1 = MyTestNode("127.0.0.1", 10001)
+        node2 = MyTestNode("127.0.0.1", 10002)
+        node3 = MyTestNode("127.0.0.1", 10003)
 
         node1.start()
         node2.start()
         node3.start()
 
-        node1.connect_with_node('127.0.0.1', 8002)
+        node1.connect_with_node('127.0.0.1', 10002)
         time.sleep(2)
 
-        node3.connect_with_node('127.0.0.1', 8001)
+        node3.connect_with_node('127.0.0.1', 10001)
         time.sleep(2)
 
         # Send messages

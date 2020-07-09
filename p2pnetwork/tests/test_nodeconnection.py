@@ -32,18 +32,18 @@ class TestNode(unittest.TestCase):
                 messages.append(type(data))
                 messages.append(len(data))
                 
-        node1 = MyTestNode("127.0.0.1", 8001)
-        node2 = MyTestNode("127.0.0.1", 8002)
-        node3 = MyTestNode("127.0.0.1", 8003)
+        node1 = MyTestNode("127.0.0.1", 10001)
+        node2 = MyTestNode("127.0.0.1", 10002)
+        node3 = MyTestNode("127.0.0.1", 10003)
 
         node1.start()
         node2.start()
         node3.start()
 
-        node1.connect_with_node('127.0.0.1', 8002)
+        node1.connect_with_node('127.0.0.1', 10002)
         time.sleep(2)
 
-        node3.connect_with_node('127.0.0.1', 8001)
+        node3.connect_with_node('127.0.0.1', 10001)
         time.sleep(2)
 
         # Create large message; large than used buffer 4096!
@@ -96,18 +96,18 @@ class TestNode(unittest.TestCase):
                 # messages.append("instance byte:" + isinstance(data, bytes))
                 # Check the message here wether it is correct!
                 
-        node1 = MyTestNode("127.0.0.1", 8001)
-        node2 = MyTestNode("127.0.0.1", 8002)
-        node3 = MyTestNode("127.0.0.1", 8003)
+        node1 = MyTestNode("127.0.0.1", 10001)
+        node2 = MyTestNode("127.0.0.1", 10002)
+        node3 = MyTestNode("127.0.0.1", 10003)
 
         node1.start()
         node2.start()
         node3.start()
 
-        node1.connect_with_node('127.0.0.1', 8002)
+        node1.connect_with_node('127.0.0.1', 10002)
         time.sleep(2)
 
-        node3.connect_with_node('127.0.0.1', 8001)
+        node3.connect_with_node('127.0.0.1', 10001)
         time.sleep(2)
 
         # Create large message; large than used buffer 4096!
