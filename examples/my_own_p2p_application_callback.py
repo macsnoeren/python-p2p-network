@@ -11,7 +11,7 @@ import sys
 import time
 sys.path.insert(0, '..') # Import the files where the modules are located
 
-from p2pnetwork import Node
+from p2pnetwork.node import Node
 
 # The big callback method that gets all the events that happen inside the p2p network.
 # Implement here your own application logic. The event holds the event that occurred within
@@ -33,7 +33,9 @@ node_2 = Node("127.0.0.1", 8002, node_callback)
 node_3 = Node("127.0.0.1", 8003, node_callback)
 
 time.sleep(1)
-
+#node_1.debug = True
+#node_2.debug = True
+#node_3.debug = True
 node_1.start()
 node_2.start()
 node_3.start()
