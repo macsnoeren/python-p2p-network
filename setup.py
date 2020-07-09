@@ -5,10 +5,10 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="p2pnetwork",
-    version="0.0.2",
+    version="0.0.3",
     author="Maurice Snoeren",
     author_email="macsnoeren@gmail.com",
-    description="Python decentralized peer-to-peer network application implementation.",
+    description="Python decentralized peer-to-peer network application framework.",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/macsnoeren/python-p2p-network",
