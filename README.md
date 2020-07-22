@@ -3,7 +3,7 @@ This project provides a basic and simple peer-to-peer decentralized network clas
 
 You can use the project to implement a peer-to-peer decentralized network application, like Bitcoin or file sharing applications. I have used this software to provide my students, during a technical introduction to Blockchain, basic functionality. So, they were able to focus on how they would like to implement the Blockchain functionality and protocols. Without some direction from my side. Some of the students have used the code base to implement their application in C# or C++ for example. That is the freedom I would like to give to everyone.
 
-To install the package for you to use:
+To install the package for you to use (https://pypi.org/project/p2pnetwork/):
 ````
 pip install p2pnetwork
 ````
