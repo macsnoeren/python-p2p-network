@@ -14,7 +14,6 @@ Date: 7-5-2020
 
 Python package p2pnet for implementing decentralized peer-to-peer network applications
 
-TODO: Variabele to limit the number of connected nodes.
 TODO: Also create events when things go wrong, like a connection with a node has failed.
 """
 
