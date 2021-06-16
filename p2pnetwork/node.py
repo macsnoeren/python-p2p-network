@@ -32,11 +32,12 @@ class Node(threading.Thread):
                  connected_node: Which connected node caused the event.
                  data: The data that is send by the connected node."""
 
-    def __init__(self, host, port, callback=None, max_connections=0):
+    def __init__(self, host, port, id=None, callback=None, max_connections=0):
         """Create instance of a Node. If you want to implement the Node functionality with a callback, you should 
            provide a callback method. It is preferred to implement a new node by extending this Node class. 
             host: The host name or ip address that is used to bind the TCP/IP server to.
             port: The port number that is used to bind the TCP/IP server to.
+            id: (optional) This id will be assiocated with the node. When not given a unique ID will be created.
             callback: (optional) The callback that is invokes when events happen inside the network.
             max_connections: (optional) limiting the maximum nodes that are able to connect to this node."""
         super(Node, self).__init__()
@@ -59,10 +60,14 @@ class Node(threading.Thread):
 
         # Create a unique ID for each node.
         # TODO: A fixed unique ID is required for each node, node some random is created, need to think of it.
-        id = hashlib.sha512()
-        t = self.host + str(self.port) + str(random.randint(1, 99999999))
-        id.update(t.encode('ascii'))
-        self.id = id.hexdigest()
+        if id == None:
+            id = hashlib.sha512()
+            t = self.host + str(self.port) + str(random.randint(1, 99999999))
+            id.update(t.encode('ascii'))
+            self.id = id.hexdigest()
+
+        else:
+            self.id = id
 
         # Start the TCP/IP server
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)

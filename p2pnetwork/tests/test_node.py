@@ -17,8 +17,8 @@ class TestNode(unittest.TestCase):
 
     def test_node_connection(self):
         """Testing whether two Node instances are able to connect with each other."""
-        node1 = Node("localhost", 10001)
-        node2 = Node("localhost", 10002)
+        node1 = Node(host="localhost", port=10001)
+        node2 = Node(host="localhost", port=10002)
 
         node1.start()
         node2.start()
@@ -76,8 +76,8 @@ class TestNode(unittest.TestCase):
             except Exception as e:
                 message = "exception: " + str(e) 
 
-        node1 = Node("localhost", 10001, node_callback)
-        node2 = Node("localhost", 10002, node_callback)
+        node1 = Node(host="localhost", port=10001, callback=node_callback)
+        node2 = Node(host="localhost", port=10002, callback=node_callback)
 
         node1.start()
         node2.start()
@@ -120,9 +120,9 @@ class TestNode(unittest.TestCase):
             except Exception as e:
                 message.append("exception: " + str(e))
 
-        node_0 = Node('127.0.0.1', 10000, node_callback)
-        node_1 = Node('127.0.0.1', 10001, node_callback)
-        node_2 = Node('127.0.0.1', 10002, node_callback)
+        node_0 = Node(host='127.0.0.1', port=10000, callback=node_callback)
+        node_1 = Node(host='127.0.0.1', port=10001, callback=node_callback)
+        node_2 = Node(host='127.0.0.1', port=10002, callback=node_callback)
 
         node_0.start()
         node_1.start()
@@ -206,10 +206,10 @@ class TestNode(unittest.TestCase):
             global message
             message.append(event + ":" + main_node.id)                
 
-        node_0 = Node('127.0.0.1', 10000, node_callback)
-        node_1 = Node('127.0.0.1', 10001, node_callback)
-        node_2 = Node('127.0.0.1', 10002, node_callback)
-
+        node_0 = Node(host='127.0.0.1', port=10000, callback=node_callback)
+        node_1 = Node(host='127.0.0.1', port=10001, callback=node_callback)
+        node_2 = Node(host='127.0.0.1', port=10002, callback=node_callback)
+        
         node_0.start()
         node_1.start()
         node_2.start()
@@ -312,9 +312,9 @@ class TestNode(unittest.TestCase):
                 global message
                 message.append("node is requested to stop!")
 
-        node1 = MyTestNode("127.0.0.1", 10001)
-        node2 = MyTestNode("127.0.0.1", 10002)
-        node3 = MyTestNode("127.0.0.1", 10003)
+        node1 = MyTestNode(host="127.0.0.1", port=10001)
+        node2 = MyTestNode(host="127.0.0.1", port=10002)
+        node3 = MyTestNode(host="127.0.0.1", port=10003)
 
         node1.start()
         node2.start()
@@ -384,9 +384,9 @@ class TestNode(unittest.TestCase):
             global message
             message.append(event + ":" + main_node.id)                
 
-        node_0 = Node('127.0.0.1', 10000, node_callback, 1) # max connection of 1
-        node_1 = Node('127.0.0.1', 10001, node_callback, 2) # max connection of 2
-        node_2 = Node('127.0.0.1', 10002, node_callback)
+        node_0 = Node(host='127.0.0.1', port=10000, callback=node_callback, max_connections=1) # max connection of 1
+        node_1 = Node(host='127.0.0.1', port=10001, callback=node_callback, max_connections=2) # max connection of 2
+        node_2 = Node(host='127.0.0.1', port=10002, callback=node_callback)
 
         node_0.start()
         node_1.start()
@@ -427,6 +427,33 @@ class TestNode(unittest.TestCase):
         self.assertEqual(len(node_0.nodes_inbound), 1, "More inbound connections have been accepted bij node_0!")
         self.assertEqual(len(node_1.nodes_inbound), 2, "Node 1 should have two connections from node_0 and node_2!")
         self.assertEqual(len(node_2.nodes_outbound), 1, "Node 2 should have one outbound connection with node_1!")
+
+    def test_node_id(self):
+        """Testing the ID settings of the node."""
+
+        global message
+        message = []
+
+        # Using the callback we are able to see the events and messages of the Node
+        def node_callback(event, main_node, connected_node, data):
+            global message
+            message.append(event + ":" + main_node.id)                
+
+        node_0 = Node(host='127.0.0.1', port=10000, id="thisisanidtest", callback=node_callback)
+        node_1 = Node(host='127.0.0.1', port=10000, callback=node_callback)
+
+        node_0.start()
+        node_1.start()
+        time.sleep(1)
+
+        node_0.stop()
+        node_1.stop()
+        node_0.join()
+        node_1.join()
+
+        # Perform the asserts!
+        self.assertEqual(node_0.id, "thisisanidtest", "Node 0 shoud have id \"thisisanidtest\"")
+        self.assertNotEqual(node_1.id, "thisisanidtest", "Node 1 should have a different id")
 
 if __name__ == '__main__':
     unittest.main()
