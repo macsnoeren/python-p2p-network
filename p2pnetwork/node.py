@@ -168,7 +168,7 @@ class Node(threading.Thread):
         # Check if node is already connected with this node!
         for node in self.nodes_outbound:
             if node.host == host and node.port == port:
-                print("connect_with_node: Already connected with this node.")
+                print("connect_with_node: This node is already connected with us.")
                 return True
 
         try:

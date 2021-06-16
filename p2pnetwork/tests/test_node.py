@@ -440,7 +440,7 @@ class TestNode(unittest.TestCase):
             message.append(event + ":" + main_node.id)                
 
         node_0 = Node(host='127.0.0.1', port=10000, id="thisisanidtest", callback=node_callback)
-        node_1 = Node(host='127.0.0.1', port=10000, callback=node_callback)
+        node_1 = Node(host='127.0.0.1', port=10001, callback=node_callback)
 
         node_0.start()
         node_1.start()
@@ -453,7 +453,8 @@ class TestNode(unittest.TestCase):
 
         # Perform the asserts!
         self.assertEqual(node_0.id, "thisisanidtest", "Node 0 shoud have id \"thisisanidtest\"")
-        self.assertNotEqual(node_1.id, "thisisanidtest", "Node 1 should have a different id")
+        self.assertNotEqual(node_1.id, "thisisanidtest", "Node 1 should have a different id than node 0")
+        self.assertNotEqual(node_1.id, None, "The ID pf node 1 should not be equal to None")
 
 if __name__ == '__main__':
     unittest.main()
