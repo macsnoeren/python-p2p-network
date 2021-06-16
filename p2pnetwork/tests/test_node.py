@@ -373,5 +373,60 @@ class TestNode(unittest.TestCase):
         self.assertEqual(message[12],  "node is requested to stop!", "MyTestNode should have seen this event!")
         self.assertEqual(message[13],  "node is requested to stop!", "MyTestNode should have seen this event!")
 
+    def test_node_max_connections(self):
+        """Testing the maximum connections of the node."""
+
+        global message
+        message = []
+
+        # Using the callback we are able to see the events and messages of the Node
+        def node_callback(event, main_node, connected_node, data):
+            global message
+            message.append(event + ":" + main_node.id)                
+
+        node_0 = Node('127.0.0.1', 10000, node_callback, 1) # max connection of 1
+        node_1 = Node('127.0.0.1', 10001, node_callback, 2) # max connection of 2
+        node_2 = Node('127.0.0.1', 10002, node_callback)
+
+        node_0.start()
+        node_1.start()
+        node_2.start()
+        time.sleep(1)
+
+        # Test the connections
+        node_1.connect_with_node('127.0.0.1', 10000) # This works!
+        time.sleep(2)
+
+        node_2.connect_with_node('127.0.0.1', 10000) # This should be rejected
+        time.sleep(2)
+
+        node_0.connect_with_node('127.0.0.1', 10001) # This works!
+        time.sleep(2)
+
+        node_2.connect_with_node('127.0.0.1', 10001) # This works!
+        time.sleep(2)
+
+        # Send messages
+        node_0.send_to_nodes('hello from node 0')
+        time.sleep(2)
+
+        node_1.send_to_nodes('hello from node 1')
+        time.sleep(2)
+
+        node_2.send_to_nodes('hello from node 2')
+        time.sleep(2)
+
+        node_0.stop()
+        node_1.stop()
+        node_2.stop()
+        node_0.join()
+        node_1.join()
+        node_2.join()
+
+        # Perform the asserts!
+        self.assertEqual(len(node_0.nodes_inbound), 1, "More inbound connections have been accepted bij node_0!")
+        self.assertEqual(len(node_1.nodes_inbound), 2, "Node 1 should have two connections from node_0 and node_2!")
+        self.assertEqual(len(node_2.nodes_outbound), 1, "Node 2 should have one outbound connection with node_1!")
+
 if __name__ == '__main__':
     unittest.main()

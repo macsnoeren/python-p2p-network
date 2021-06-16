@@ -37,7 +37,8 @@ class Node(threading.Thread):
            provide a callback method. It is preferred to implement a new node by extending this Node class. 
             host: The host name or ip address that is used to bind the TCP/IP server to.
             port: The port number that is used to bind the TCP/IP server to.
-            callback: (optional) The callback that is invokes when events happen inside the network."""
+            callback: (optional) The callback that is invokes when events happen inside the network.
+            max_connections: (optional) limiting the maximum nodes that are able to connect to this node."""
         super(Node, self).__init__()
 
         # When this flag is set, the node will stop and close
@@ -51,7 +52,7 @@ class Node(threading.Thread):
         self.callback = callback
 
         # Nodes that have established a connection with this node
-        self.nodes_inbound = []  # Nodes that are connect with us N->(US)->N
+        self.nodes_inbound = []  # Nodes that are connect with us N->(US)
 
         # Nodes that this nodes is connected to
         self.nodes_outbound = []  # Nodes that we are connected to (US)->N
@@ -72,7 +73,7 @@ class Node(threading.Thread):
         self.message_count_recv = 0
         self.message_count_rerr = 0
         
-        # Connection limit 
+        # Connection limit of inbound nodes (nodes that connect to us)
         self.max_connections = max_connections
 
         # Debugging on or off!
@@ -155,9 +156,6 @@ class Node(threading.Thread):
             When the connection is made the method outbound_node_connected is invoked.
             TODO: think wheter we need an error event to trigger when the connection has failed!"""
 
-        if self.check_max_connections():
-            return False
-
         if host == self.host and port == self.port:
             print("connect_with_node: Cannot connect with yourself!!")
             return False
@@ -204,14 +202,6 @@ class Node(threading.Thread):
         self.node_request_to_stop()
         self.terminate_flag.set()
 
-    def check_max_connections(self) -> bool:
-        self.print_connections()
-        if len(self.all_nodes) >= self.max_connections & self.max_connections != 0:
-            self.debug_print("You have reached the maximum connection limit!")
-            return True
-        else:
-            return False
-
     # This method can be overrided when a different nodeconnection is required!
     def create_new_connection(self, connection, id, host, port):
         """When a new connection is made, with a node or a node is connecting with us, this method is used
@@ -230,21 +220,24 @@ class Node(threading.Thread):
                 self.debug_print("Node: Wait for incoming connection")
                 connection, client_address = self.sock.accept()
 
-                if self.check_max_connections():
+                self.debug_print("Total inbound connections:" + str(len(self.nodes_inbound)))
+                # When the maximum connections are reached, it disconnects the connection 
+                if self.max_connections == 0 or len(self.nodes_inbound) < self.max_connections:
+                    
+                    # Basic information exchange (not secure) of the id's of the nodes!
+                    connected_node_id = connection.recv(4096).decode('utf-8') # When a node is connected, it sends it id!
+                    connection.send(self.id.encode('utf-8')) # Send my id to the connected node!
+
+                    thread_client = self.create_new_connection(connection, connected_node_id, client_address[0], client_address[1])
+                    thread_client.start()
+
+                    self.nodes_inbound.append(thread_client)
+                    self.inbound_node_connected(thread_client)
+
+                else:
+                    self.debug_print("New connection is closed. You have reached the maximum connection limit!")
                     connection.close()
-                    continue
-
-                # Basic information exchange (not secure) of the id's of the nodes!
-                connected_node_id = connection.recv(4096).decode('utf-8') # When a node is connected, it sends it id!
-                connection.send(self.id.encode('utf-8')) # Send my id to the connected node!
-
-                thread_client = self.create_new_connection(connection, connected_node_id, client_address[0], client_address[1])
-                thread_client.start()
-
-                self.nodes_inbound.append(thread_client)
-
-                self.inbound_node_connected(thread_client)
-                
+            
             except socket.timeout:
                 self.debug_print('Node: Connection timeout!')
 
