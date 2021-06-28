@@ -27,7 +27,7 @@ time.sleep(1)
 
 node_1.connect_with_node('127.0.0.1', 8002)
 node_2.connect_with_node('127.0.0.1', 8003)
-node_3.connect_with_node('127.0.0.1', 8002)
+node_3.connect_with_node('127.0.0.1', 8001)
 
 time.sleep(2)
 
