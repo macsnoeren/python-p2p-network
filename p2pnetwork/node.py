@@ -57,6 +57,9 @@ class Node(threading.Thread):
         # Nodes that this nodes is connected to
         self.nodes_outbound = []  # Nodes that we are connected to (US)->N
 
+        # A list of nodes that should be reconnected to whenever the connection was lost
+        self.reconnect_to_nodes = []
+
         # Create a unique ID for each node if the ID is not given.
         if id == None:
             id = hashlib.sha512()
@@ -132,13 +135,12 @@ class Node(threading.Thread):
         else:
             self.debug_print("Node send_to_node: Could not send the data, node is not found!")
 
-    def connect_with_node(self, host, port):
+    def connect_with_node(self, host, port, reconnect=False):
         """ Make a connection with another node that is running on host with port. When the connection is made, 
             an event is triggered outbound_node_connected. When the connection is made with the node, it exchanges
             the id's of the node. First we send our id and then we receive the id of the node we are connected to.
-            When the connection is made the method outbound_node_connected is invoked.
-            TODO: think whether we need an error event to trigger when the connection has failed!
-            TODO: Deal with timeout on the socket, making sure we do not hang!"""
+            When the connection is made the method outbound_node_connected is invoked. If reconnect is True, the
+            node will try to reconnect to the code whenever the node connection was closed."""
 
         if host == self.host and port == self.port:
             print("connect_with_node: Cannot connect with yourself!!")
@@ -171,6 +173,13 @@ class Node(threading.Thread):
             self.nodes_outbound.append(thread_client)
             self.outbound_node_connected(thread_client)
 
+            # If reconnection to this host is required, it will be added to the list!
+            if reconnect:
+                self.debug_print("connect_with_node: Reconnection check is enabled on node " + host + ":" + str(port))
+                self.reconnect_to_nodes.append({
+                    "host": host, "port": port, "tries": 0
+                })
+
         except Exception as e:
             self.debug_print("TcpServer.connect_with_node: Could not connect with node. (" + str(e) + ")")
 
@@ -198,6 +207,28 @@ class Node(threading.Thread):
            the node connection."""
         return NodeConnection(self, connection, id, host, port)
 
+    def reconnect_nodes(self):
+        """This method checks whether nodes that have the reconnection status are still connected. If not
+           connected these nodes are started again."""
+        for node_to_check in self.reconnect_to_nodes:
+            found_node = False
+            self.debug_print("reconnect_nodes: Checking node " + node_to_check["host"] + ":" + str(node_to_check["port"]))
+
+            for node in self.nodes_outbound:
+                if node.host == node_to_check["host"] and node.port == node_to_check["port"]:
+                    found_node = True
+                    node_to_check["trials"] = 0 # Reset the trials
+                    self.debug_print("reconnect_nodes: Node " + node_to_check["host"] + ":" + str(node_to_check["port"]) + " still running!")
+
+            if not found_node: # Reconnect with node
+                node_to_check["trials"] += 1
+                if self.node_reconnection_error(node_to_check["host"], node_to_check["port"], node_to_check["trials"]):
+                    self.connect_with_node(node_to_check["host"], node_to_check["port"]) # Perform the actual connection
+
+                else:
+                    self.debug_print("reconnect_nodes: Removing node (" + node_to_check["host"] + ":" + str(node_to_check["port"]) + ") from the reconnection list!")
+                    self.reconnect_to_nodes.remove(node_to_check)
+
     def run(self):
         """The main loop of the thread that deals with connections from other nodes on the network. When a
            node is connected it will exchange the node id's. First we receive the id of the connected node
@@ -209,7 +240,7 @@ class Node(threading.Thread):
                 connection, client_address = self.sock.accept()
 
                 self.debug_print("Total inbound connections:" + str(len(self.nodes_inbound)))
-                # When the maximum connections are reached, it disconnects the connection 
+                # When the maximum connections is reached, it disconnects the connection 
                 if self.max_connections == 0 or len(self.nodes_inbound) < self.max_connections:
                     
                     # Basic information exchange (not secure) of the id's of the nodes!
@@ -231,6 +262,8 @@ class Node(threading.Thread):
 
             except Exception as e:
                 raise e
+
+            self.reconnect_nodes()
 
             time.sleep(0.01)
 
@@ -312,6 +345,15 @@ class Node(threading.Thread):
         self.debug_print("node is requested to stop!")
         if self.callback is not None:
             self.callback("node_request_to_stop", self, {}, {})
+
+    def node_reconnection_error(self, host, port, trials):
+        """This method is invoked when a reconnection error occurred. The node connection is disconnected and the
+           flag for reconnection is set to True for this node. This function can be overidden to implement your
+           specific logic to take action when a lot of trials have been done. If the method returns True, the
+           node will try to perform the reconnection. If the method returns False, the node will stop reconnecting
+           to this node. The node will forever tries to perform the reconnection."""
+        self.debug_print("node_reconnection_error: Reconnecting to node " + host + ":" + str(port) + " (trials: " + str(trials) + ")")
+        return True
 
     def __str__(self):
         return 'Node: {}:{}'.format(self.host, self.port)
