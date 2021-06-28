@@ -10,6 +10,7 @@ Version: 0.1 beta (use at your own risk)
 Testing the node on its basic functionality, like connecting to other nodes and
 sending data around. Furthermore, the events are tested whether they are handled
 correctly in the case of the callback and in the case of extending the class.
+TODO: Tests to check the correct disconnection of the nodes.
 """
 
 class TestNode(unittest.TestCase):
