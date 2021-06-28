@@ -149,7 +149,7 @@ class Node(threading.Thread):
         # Check if node is already connected with this node!
         for node in self.nodes_outbound:
             if node.host == host and node.port == port:
-                print("connect_with_node: Already connected with this node.")
+                print("connect_with_node: Already connected with this node (" + node.id + ").")
                 return True
 
         try:
@@ -164,7 +164,7 @@ class Node(threading.Thread):
             # Fix bug: Cannot connect with nodes that are already connected with us!
             for node in self.nodes_inbound:
                 if node.host == host and node.id == connected_node_id:
-                    print("connect_with_node: This node is already connected with us.")
+                    print("connect_with_node: This node (" + node.id + ") is already connected with us.")
                     return True
 
             thread_client = self.create_new_connection(sock, connected_node_id, host, port)
