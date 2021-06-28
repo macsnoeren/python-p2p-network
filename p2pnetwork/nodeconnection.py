@@ -1,9 +1,6 @@
 import socket
-import sys
 import time
 import threading
-import random
-import hashlib
 import json
 
 """
@@ -45,7 +42,7 @@ class NodeConnection(threading.Thread):
         self.terminate_flag = threading.Event()
 
         # The id of the connected node
-        self.id = id
+        self.id = str(id) # Make sure the ID is a string
 
         # End of transmission character for the network streaming messages.
         self.EOT_CHAR = 0x04.to_bytes(1, 'big')
@@ -53,28 +50,37 @@ class NodeConnection(threading.Thread):
         # Datastore to store additional information concerning the node.
         self.info = {}
 
+        # Use socket timeout to determine problems with the connection
+        self.sock.settimeout(10.0)
+
         self.main_node.debug_print("NodeConnection.send: Started with client (" + self.id + ") '" + self.host + ":" + str(self.port) + "'")
 
     def send(self, data, encoding_type='utf-8'):
         """Send the data to the connected node. The data can be pure text (str), dict object (send as json) and bytes object.
            When sending bytes object, it will be using standard socket communication. A end of transmission character 0x04 
-           utf-8/ascii will be used to decode the packets ate the other node."""
+           utf-8/ascii will be used to decode the packets ate the other node. When the socket is corrupted the node connection
+           is closed."""
         if isinstance(data, str):
-            self.sock.sendall( data.encode(encoding_type) + self.EOT_CHAR )
+            try:
+                self.sock.sendall( data.encode(encoding_type) + self.EOT_CHAR )
+
+            except Exception as e: # Fixed issue #19: When sending is corrupted, close the connection
+                self.main_node.debug_print("nodeconnection send: Error sending data to node: " + str(e))
+                self.stop() # Stopping node due to failure
 
         elif isinstance(data, dict):
             try:
                 json_data = json.dumps(data)
                 json_data = json_data.encode(encoding_type) + self.EOT_CHAR
                 self.sock.sendall(json_data)
-
+                
             except TypeError as type_error:
                 self.main_node.debug_print('This dict is invalid')
                 self.main_node.debug_print(type_error)
 
-            except Exception as e:
-                print('Unexpected Error in send message')
-                print(e)
+            except Exception as e: # Fixed issue #19: When sending is corrupted, close the connection
+                self.main_node.debug_print("nodeconnection send: Error sending data to node: " + str(e))
+                self.stop() # Stopping node due to failure
 
         elif isinstance(data, bytes):
             bin_data = data + self.EOT_CHAR
@@ -112,8 +118,7 @@ class NodeConnection(threading.Thread):
     def run(self):
         """The main loop of the thread to handle the connection with the node. Within the
            main loop the thread waits to receive data from the node. If data is received 
-           the method node_message will be invoked of the main node to be processed."""
-        self.sock.settimeout(10.0)          
+           the method node_message will be invoked of the main node to be processed."""          
         buffer = b'' # Hold the stream that comes in!
 
         while not self.terminate_flag.is_set():
@@ -126,7 +131,7 @@ class NodeConnection(threading.Thread):
                 self.main_node.debug_print("NodeConnection: timeout")
 
             except Exception as e:
-                self.terminate_flag.set()
+                self.terminate_flag.set() # Exception occurred terminating the connection
                 self.main_node.debug_print('Unexpected error')
                 self.main_node.debug_print(e)
 
@@ -147,9 +152,9 @@ class NodeConnection(threading.Thread):
             time.sleep(0.01)
 
         # IDEA: Invoke (event) a method in main_node so the user is able to send a bye message to the node before it is closed?
-
         self.sock.settimeout(None)
         self.sock.close()
+        self.main_node.node_disconnected( self ) # Fixed issue #19: Send to main_node when a node is disconnected. We do not know whether it is inbounc or outbound.
         self.main_node.debug_print("NodeConnection: Stopped")
 
     def set_info(self, key, value):

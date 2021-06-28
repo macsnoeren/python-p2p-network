@@ -28,9 +28,9 @@ def node_callback(event, main_node, connected_node, data):
 
 # Just for test we spin off multiple nodes, however it is more likely that these nodes are running
 # on computers on the Internet! Otherwise we do not have any peer2peer application.
-node_1 = Node("127.0.0.1", 8001, node_callback)
-node_2 = Node("127.0.0.1", 8002, node_callback)
-node_3 = Node("127.0.0.1", 8003, node_callback)
+node_1 = Node("127.0.0.1", 8001, callback=node_callback)
+node_2 = Node("127.0.0.1", 8002, callback=node_callback)
+node_3 = Node("127.0.0.1", 8003, callback=node_callback)
 
 time.sleep(1)
 #node_1.debug = True

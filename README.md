@@ -43,8 +43,8 @@ from p2pnetwork.node import Node
 
 class MyOwnPeer2PeerNode (Node):
     # Python class constructor
-    def __init__(self, host, port):
-        super(MyOwnPeer2PeerNode, self).__init__(host, port, None)
+    def __init__(self, host, port, id=None, callback=None, max_connections=0):
+        super(MyOwnPeer2PeerNode, self).__init__(host, port, id, callback, max_connections)
 
     def outbound_node_connected(self, connected_node):
         print("outbound_node_connected: " + connected_node.id)
@@ -75,15 +75,15 @@ class MyOwnPeer2PeerNode (Node):
         return MyOwnNodeConnection(self, connection, id, host, port)
 ````
 ### Extend class NodeConnection
-The NodeConnection class only hold the TCP/IP connection with the other node, to manage the different connection to and from the main node. It does not implement application specific elements. Mostly, you will only need to extend the Node class. However, when you would like to create your own NodeConnection class you can do this. Make sure that you override ````create_new_connection(self, connection, id, host, port)```` in the class Node, to make sure you initiate your own NodeConnection class. The example below shows some example.
+The NodeConnection class only hold the TCP/IP connection with the other node, to manage the different connections to and from the main node. It does not implement application specific elements. Mostly, you will only need to extend the Node class. However, when you would like to create your own NodeConnection class you can do this. Make sure that you override ````create_new_connection(self, connection, id, host, port)```` in the class Node, to make sure you initiate your own NodeConnection class. The example below shows some example.
 
 ````python
 from p2pnetwork.node import Node
 
 class MyOwnPeer2PeerNode (Node):
     # Python class constructor
-    def __init__(self, host, port):
-        super(MyOwnPeer2PeerNode, self).__init__(host, port, None)
+    def __init__(self, host, port, id=None, callback=None, max_connections=0):
+        super(MyOwnPeer2PeerNode, self).__init__(host, port, id, callback, max_connections)
 
     # Override event functions...
 
@@ -101,7 +101,7 @@ class MyOwnNodeConnection (NodeConnection):
         super(MyOwnNodeConnection, self).__init__(main_node, sock, id, host, port)
 
     # Check yourself what you would like to change and override! See the 
-    # documentation
+    # documentation and code of the nodeconnection class.
 ````
 
 ### Using your new classes
