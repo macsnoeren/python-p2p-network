@@ -1,5 +1,4 @@
 import socket
-import sys
 import time
 import threading
 import random
@@ -58,8 +57,7 @@ class Node(threading.Thread):
         # Nodes that this nodes is connected to
         self.nodes_outbound = []  # Nodes that we are connected to (US)->N
 
-        # Create a unique ID for each node.
-        # TODO: A fixed unique ID is required for each node, node some random is created, need to think of it.
+        # Create a unique ID for each node if the ID is not given.
         if id == None:
             id = hashlib.sha512()
             t = self.host + str(self.port) + str(random.randint(1, 99999999))
