@@ -62,10 +62,7 @@ class Node(threading.Thread):
 
         # Create a unique ID for each node if the ID is not given.
         if id == None:
-            id = hashlib.sha512()
-            t = self.host + str(self.port) + str(random.randint(1, 99999999))
-            id.update(t.encode('ascii'))
-            self.id = id.hexdigest()
+            self.id = self.generate_id()
 
         else:
             self.id = str(id) # Make sure the ID is a string!
@@ -94,6 +91,14 @@ class Node(threading.Thread):
         """When the debug flag is set to True, all debug messages are printed in the console."""
         if self.debug:
             print("DEBUG (" + self.id + "): " + message)
+
+    def generate_id(self):
+        """Generates a unique ID for each node."""
+        id = hashlib.sha512()
+        t = self.host + str(self.port) + str(random.randint(1, 99999999))
+        id.update(t.encode('ascii'))
+        return id.hexdigest()
+        
 
     def init_server(self):
         """Initialization of the TCP/IP server to receive connections. It binds to the given host and port."""
