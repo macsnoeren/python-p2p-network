@@ -3,6 +3,7 @@ import time
 import threading
 import random
 import hashlib
+from typing_extensions import TypeVarTuple
 
 from p2pnetwork.nodeconnection import NodeConnection
 
@@ -145,7 +146,8 @@ class Node(threading.Thread):
             an event is triggered outbound_node_connected. When the connection is made with the node, it exchanges
             the id's of the node. First we send our id and then we receive the id of the node we are connected to.
             When the connection is made the method outbound_node_connected is invoked. If reconnect is True, the
-            node will try to reconnect to the code whenever the node connection was closed."""
+            node will try to reconnect to the code whenever the node connection was closed. The method returns
+            True when the node is connected with the specific host."""
 
         if host == self.host and port == self.port:
             print("connect_with_node: Cannot connect with yourself!!")
@@ -167,9 +169,12 @@ class Node(threading.Thread):
             connected_node_id = sock.recv(4096).decode('utf-8') # When a node is connected, it sends it id!
 
             # Fix bug: Cannot connect with nodes that are already connected with us!
+            #          Send message and close the socket.
             for node in self.nodes_inbound:
                 if node.host == host and node.id == connected_node_id:
                     print("connect_with_node: This node (" + node.id + ") is already connected with us.")
+                    sock.send("CLOSING: Already having a connection together".encode('utf-8'))
+                    sock.close()
                     return True
 
             thread_client = self.create_new_connection(sock, connected_node_id, host, port)
@@ -185,8 +190,11 @@ class Node(threading.Thread):
                     "host": host, "port": port, "tries": 0
                 })
 
+            return True
+
         except Exception as e:
             self.debug_print("TcpServer.connect_with_node: Could not connect with node. (" + str(e) + ")")
+            return False
 
     def disconnect_with_node(self, node):
         """Disconnect the TCP/IP connection with the specified node. It stops the node and joins the thread.
