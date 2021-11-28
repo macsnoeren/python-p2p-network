@@ -3,7 +3,6 @@ import time
 import threading
 import random
 import hashlib
-from typing_extensions import TypeVarTuple
 
 from p2pnetwork.nodeconnection import NodeConnection
 
