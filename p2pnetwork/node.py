@@ -165,7 +165,14 @@ class Node(threading.Thread):
 
             # Basic information exchange (not secure) of the id's of the nodes!
             sock.send(self.id.encode('utf-8')) # Send my id to the connected node!
-            connected_node_id = sock.recv(4096).decode('utf-8') # When a node is connected, it sends it id!
+            connected_node_id = sock.recv(4096).decode('utf-8') # When a node is connected, it sends its id!
+
+            # Cannot connect with yourself
+            if self.id == connected_node_id:
+                print("connect_with_node: You cannot connect with yourself?!")
+                sock.send("CLOSING: Already having a connection together".encode('utf-8'))
+                sock.close()
+                return True
 
             # Fix bug: Cannot connect with nodes that are already connected with us!
             #          Send message and close the socket.
