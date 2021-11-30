@@ -1,6 +1,8 @@
 # Getting started with p2pnetwork
 This tutorial provides you with a walk through how to use the p2pnetwork framework. If you would like to use this framework, you can use these steps to get familiar with the module. Eventually it is up to you to use and implement your specific details to the p2pnetwork applications.
 
+This example is also available on github: https://github.com/macsnoeren/python-p2p-network-example.git.
+
 ## Should I use this module?
 **If you would like to create peer-to-peer network applications ... the answer is yes!** The module provides you with all the basic details of peer-to-peer network applications. It starts a node that is able to connect to other nodes and is able to receive connections from other nodes. When running a node, you get all the details using an event based structure. When some node is connecting or sending a message, methods are invokes, so you immediatly can react on it. In other words, implementing your application details. 
 
@@ -29,7 +31,7 @@ from p2pnetwork.node import Node
 class FileSharingNode (Node):
 
     def __init__(self, host, port, id=None, callback=None, max_connections=0):
-        super(MyOwnPeer2PeerNode, self).__init__(host, port, id, callback, max_connections)
+        super(FileSharingNode, self).__init__(host, port, id, callback, max_connections)
 
     def outbound_node_connected(self, connected_node):
         print("outbound_node_connected: " + connected_node.id)
@@ -106,7 +108,7 @@ From this moment, you have already a bare minimum application that implements th
 2. ````python file_sharing_node.py 9877````
 
 ## Step 5: Connect to another node
-We are going to add the functionality to connect with another node. In this case, you should spin off in another terminal the application on port 9877: ````file_sharing_node.py 9877````. When the user wants to connect to another node, you need to provide a host/ip and port number.
+We are going to add the functionality to connect with another node. In this case, you should spin off in another terminal the application on port 9877: ````file_sharing_node.py 9877````. When the user wants to connect to another node, you need to provide a host/ip and port number. Add the following code to ````file_sharing_node.py````.
 
 ````python
 ....
