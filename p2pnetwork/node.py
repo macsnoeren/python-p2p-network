@@ -122,22 +122,25 @@ class Node(threading.Thread):
             self.debug_print("Node send_to_node: Could not send the data, node is not found!")
 
     def connect_with_node(self, host: str, port: int, reconnect: bool = False) -> bool:
-        """ Make a connection with another node that is running on host with port. When the connection is made,
-            an event is triggered outbound_node_connected. When the connection is made with the node, it exchanges
-            the id's of the node. First we send our id and then we receive the id of the node we are connected to.
-            When the connection is made the method outbound_node_connected is invoked. If reconnect is True, the
-            node will try to reconnect to the code whenever the node connection was closed. The method returns
-            True when the node is connected with the specific host."""
+        """Make a connection with another node that is running on host with port.
+
+        When the connection is made, an event is triggered outbound_node_connected. When the connection is made with
+        the node, it exchanges the id's of the node. First we send our id and then we receive the id of the node we
+        are connected to. When the connection is made the method outbound_node_connected is invoked. If reconnect is
+        True, the node will try to reconnect to the code whenever the node connection was closed. The method returns
+        True when the node is connected with the specific host."""
 
         if host == self.host and port == self.port:
             print("connect_with_node: Cannot connect with yourself!!")
             return False
 
         # Check if node is already connected with this node!
-        for node in self.nodes_outbound:
-            if node.host == host and node.port == port:        
+        for node in self.all_nodes:
+            if node.host == host and node.port == port:
                 print(f"connect_with_node: Already connected with this node ({node.id}).")
                 return True
+
+        node_ids = [node.id for node in self.all_nodes]
 
         try:
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -149,20 +152,10 @@ class Node(threading.Thread):
             connected_node_id = sock.recv(4096).decode('utf-8')  # When a node is connected, it sends its id!
 
             # Cannot connect with yourself
-            if self.id == connected_node_id:
-                print("connect_with_node: You cannot connect with yourself?!")
+            if self.id == connected_node_id or connected_node_id in node_ids:
                 sock.send("CLOSING: Already having a connection together".encode('utf-8'))
                 sock.close()
                 return True
-
-            # Fix bug: Cannot connect with nodes that are already connected with us!
-            #          Send message and close the socket.
-            for node in self.nodes_inbound:
-                if node.host == host and node.id == connected_node_id:
-                    print(f"connect_with_node: This node ({node.id}) is already connected with us.")
-                    sock.send("CLOSING: Already having a connection together".encode('utf-8'))
-                    sock.close()
-                    return True
 
             thread_client = self.create_new_connection(sock, connected_node_id, host, port)
             thread_client.start()
@@ -202,7 +195,6 @@ class Node(threading.Thread):
         self.node_request_to_stop()
         self.terminate_flag.set()
 
-    # This method can be override when a different nodeconnection is required!
     def create_new_connection(self, connection: socket.socket, id: str, host: str, port: int) -> NodeConnection:
         """When a new connection is made, with a node or a node is connecting with us, this method is used
            to create the actual new connection. The reason for this method is to be able to override the
