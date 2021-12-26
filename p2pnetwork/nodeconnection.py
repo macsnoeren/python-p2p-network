@@ -1,3 +1,4 @@
+from typing import Union, Any
 import socket
 import time
 import threading
@@ -20,7 +21,7 @@ class NodeConnection(threading.Thread):
         host: The host/ip of the main node.
         port: The port of the server of the main node."""
 
-    def __init__(self, main_node, sock, id, host, port):
+    def __init__(self, main_node, sock: socket.socket, id: str, host: str, port: int):
         super(NodeConnection, self).__init__()
 
         self.host = host
@@ -45,7 +46,7 @@ class NodeConnection(threading.Thread):
             "NodeConnection.send: Started with client (" + self.id + ") '" + self.host + ":" + str(
                 self.port) + "'")
 
-    def send(self, data, encoding_type='utf-8'):
+    def send(self, data: Union[str, dict, bytes], encoding_type: str = 'utf-8'):
         """Send the data to the connected node. The data can be pure text (str), dict object (send as json) and bytes
         object. When sending bytes object, it will be using standard socket communication. A end of transmission
         character 0x04 utf-8/ascii will be used to decode the packets ate the other node. When the socket is
@@ -84,13 +85,13 @@ class NodeConnection(threading.Thread):
             self.main_node.debug_print(
                 'datatype used is not valid please use str, dict (will be send as json) or bytes')
 
-    def stop(self):
+    def stop(self) -> None:
         """Terminates the connection and the thread is stopped.
         Please make sure you join the thread."""
         self.terminate_flag.set()
 
     @staticmethod
-    def parse_packet(packet):
+    def parse_packet(packet) -> Union[str, dict, bytes]:
         """Parse the packet and determines whether it has been send in str, json or byte format. It returns
            the according data."""
         try:
@@ -150,17 +151,17 @@ class NodeConnection(threading.Thread):
         self.main_node.node_disconnected(self)
         self.main_node.debug_print("NodeConnection: Stopped")
 
-    def set_info(self, key, value):
+    def set_info(self, key: str, value: Any) -> Any:
         self.info[key] = value
 
-    def get_info(self, key):
+    def get_info(self, key: str) -> Any:
         return self.info[key]
 
-    def __str__(self):
+    def __str__(self) -> str:
         return 'NodeConnection: {}:{} <-> {}:{} ({})'.format(
             self.main_node.host, self.main_node.port, self.host, self.port,
             self.id)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return '<NodeConnection: Node {}:{} <-> Connection {}:{}>'.format(
             self.main_node.host, self.main_node.port, self.host, self.port)
