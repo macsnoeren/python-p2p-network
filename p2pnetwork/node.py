@@ -51,7 +51,7 @@ class Node(threading.Thread):
         self.reconnect_to_nodes = []
 
         # Create a unique ID for each node if the ID is not given.
-        if id == None:
+        if id is None:
             self.id = self.generate_id()
 
         else:
