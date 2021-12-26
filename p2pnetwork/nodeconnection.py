@@ -89,7 +89,8 @@ class NodeConnection(threading.Thread):
         Please make sure you join the thread."""
         self.terminate_flag.set()
 
-    def parse_packet(self, packet):
+    @staticmethod
+    def parse_packet(packet):
         """Parse the packet and determines whether it has been send in str, json or byte format. It returns
            the according data."""
         try:
