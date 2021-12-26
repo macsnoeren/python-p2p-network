@@ -1,18 +1,16 @@
+"""
+Testing the node communication by sending large amount of str and dict data
+to see whether the node is correctly handling this.
+TODO: testing sending bytes
+TODO: buffer overflow testing
+"""
 import unittest
 import time
 import struct
 
 from p2pnetwork.node import Node
 
-"""
-Author: Maurice Snoeren
-Version: 0.1 beta (use at your own risk)
 
-Testing the node communication by sending large amount of str and dict data
-to see whether the node is correctly handling this.
-TODO: testing sending bytes
-TODO: bufferoverlow testing
-"""
 class TestNode(unittest.TestCase):
     """Testing the NodeConnection class."""
 

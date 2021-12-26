@@ -1,3 +1,6 @@
+"""
+Python package p2pnet for implementing decentralized peer-to-peer network applications
+"""
 import socket
 import time
 import threading
@@ -6,38 +9,27 @@ import hashlib
 
 from p2pnetwork.nodeconnection import NodeConnection
 
-"""
-Author: Maurice Snoeren <macsnoeren(at)gmail.com>
-Version: 0.3 beta (use at your own risk)
-Date: 7-5-2020
-
-Python package p2pnet for implementing decentralized peer-to-peer network applications
-"""
-
 
 class Node(threading.Thread):
     """Implements a node that is able to connect to other nodes and is able to accept connections from other nodes.
+
     After instantiation, the node creates a TCP/IP server with the given port.
 
     Create instance of a Node. If you want to implement the Node functionality with a callback, you should
     provide a callback method. It is preferred to implement a new node by extending this Node class.
-      host: The host name or ip address that is used to bind the TCP/IP server to.
-      port: The port number that is used to bind the TCP/IP server to.
-      callback: (optional) The callback that is invokes when events happen inside the network
-               def node_callback(event, main_node, connected_node, data):
-                 event: The event string that has happened.
-                 main_node: The main node that is running all the connections with the other nodes.
-                 connected_node: Which connected node caused the event.
-                 data: The data that is send by the connected node."""
+        host: The host name or ip address that is used to bind the TCP/IP server to.
+        port: The port number that is used to bind the TCP/IP server to.
+        id: (optional) This id will be associated with the node. When not given a unique ID will be created.
+            callback: (optional) The callback that is invokes when events happen inside the network.
+        callback: (optional) The callback that is invokes when events happen inside the network
+            def node_callback(event, main_node, connected_node, data):
+                event: The event string that has happened.
+                main_node: The main node that is running all the connections with the other nodes.
+                connected_node: Which connected node caused the event.
+                data: The data that is send by the connected node.
+        max_connections: (optional) limiting the maximum nodes that are able to connect to this node."""
 
     def __init__(self, host, port, id=None, callback=None, max_connections=0):
-        """Create instance of a Node. If you want to implement the Node functionality with a callback, you should
-           provide a callback method. It is preferred to implement a new node by extending this Node class.
-            host: The host name or ip address that is used to bind the TCP/IP server to.
-            port: The port number that is used to bind the TCP/IP server to.
-            id: (optional) This id will be associated with the node. When not given a unique ID will be created.
-            callback: (optional) The callback that is invokes when events happen inside the network.
-            max_connections: (optional) limiting the maximum nodes that are able to connect to this node."""
         super(Node, self).__init__()
 
         # When this flag is set, the node will stop and close

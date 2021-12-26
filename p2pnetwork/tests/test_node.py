@@ -1,18 +1,14 @@
-import unittest
-import time
-
-from p2pnetwork.node import Node
-
 """
-Author: Maurice Snoeren
-Version: 0.1 beta (use at your own risk)
-
 Testing the node on its basic functionality, like connecting to other nodes and
 sending data around. Furthermore, the events are tested whether they are handled
 correctly in the case of the callback and in the case of extending the class.
 TODO: Tests to check the correct disconnection of the nodes.
 TODO: Tests to check the reconnection functionality of the node.
 """
+import unittest
+import time
+
+from p2pnetwork.node import Node
 
 class TestNode(unittest.TestCase):
     """Testing the Node class."""

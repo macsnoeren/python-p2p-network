@@ -3,17 +3,10 @@ import time
 import threading
 import json
 
-"""
-Author : Maurice Snoeren <macsnoeren(at)gmail.com>
-Version: 0.3 beta (use at your own risk)
-Date: 7-5-2020
-
-Python package p2pnet for implementing decentralized peer-to-peer network applications
-"""
-
 
 class NodeConnection(threading.Thread):
-    """The class NodeConnection is used by the class Node and represent the TCP/IP socket connection with another node. 
+    """The class NodeConnection is used by the class Node and represent the TCP/IP socket connection with another node.
+
        Both inbound (nodes that connect with the server) and outbound (nodes that are connected to) are represented by
        this class. The class contains the client socket and hold the id information of the connecting node. Communication
        is done by this class. When a connecting node sends a message, the message is relayed to the main node (that created
@@ -22,19 +15,12 @@ class NodeConnection(threading.Thread):
        Instantiates a new NodeConnection. Do not forget to start the thread. All TCP/IP communication is handled by this 
        connection.
         main_node: The Node class that received a connection.
-        sock: The socket that is assiociated with the client connection.
+        sock: The socket that is associated with the client connection.
         id: The id of the connected node (at the other side of the TCP/IP connection).
         host: The host/ip of the main node.
         port: The port of the server of the main node."""
 
     def __init__(self, main_node, sock, id, host, port):
-        """Instantiates a new NodeConnection. Do not forget to start the thread. All TCP/IP communication is handled by this connection.
-            main_node: The Node class that received a connection.
-            sock: The socket that is assiociated with the client connection.
-            id: The id of the connected node (at the other side of the TCP/IP connection).
-            host: The host/ip of the main node.
-            port: The port of the server of the main node."""
-
         super(NodeConnection, self).__init__()
 
         self.host = host
@@ -96,7 +82,7 @@ class NodeConnection(threading.Thread):
 
         else:
             self.main_node.debug_print(
-                'datatype used is not valid plese use str, dict (will be send as json) or bytes')
+                'datatype used is not valid please use str, dict (will be send as json) or bytes')
 
     def stop(self):
         """Terminates the connection and the thread is stopped.
@@ -104,7 +90,7 @@ class NodeConnection(threading.Thread):
         self.terminate_flag.set()
 
     def parse_packet(self, packet):
-        """Parse the packet and determines wheter it has been send in str, json or byte format. It returns
+        """Parse the packet and determines whether it has been send in str, json or byte format. It returns
            the according data."""
         try:
             packet_decoded = packet.decode('utf-8')
