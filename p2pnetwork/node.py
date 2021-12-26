@@ -115,8 +115,8 @@ class Node(threading.Thread):
 
     def send_to_node(self, n: NodeConnection, data: Union[str, dict, bytes]) -> None:
         """ Send the data to the node n if it exists."""
-        self.message_count_send = self.message_count_send + 1
-        if n in self.nodes_inbound or n in self.nodes_outbound:
+        self.message_count_send += 1
+        if n in self.all_nodes:
             n.send(data)
         else:
             self.debug_print("Node send_to_node: Could not send the data, node is not found!")
