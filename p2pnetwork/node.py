@@ -73,7 +73,7 @@ class Node(threading.Thread):
         self.debug = False
 
     @property
-    def all_nodes(self) -> list:
+    def all_nodes(self) -> List[NodeConnection]:
         """Return a list of all the nodes, inbound and outbound, that are connected with this node."""
         return self.nodes_inbound + self.nodes_outbound
 
@@ -269,19 +269,13 @@ class Node(threading.Thread):
             time.sleep(0.01)
 
         print("Node stopping...")
-        for t in self.nodes_inbound:
-            t.stop()
-
-        for t in self.nodes_outbound:
-            t.stop()
+        for node in self.all_nodes:
+            node.stop()
 
         time.sleep(1)
 
-        for t in self.nodes_inbound:
-            t.join()
-
-        for t in self.nodes_outbound:
-            t.join()
+        for node in self.all_nodes:
+            node.join()
 
         self.sock.settimeout(None)
         self.sock.close()
