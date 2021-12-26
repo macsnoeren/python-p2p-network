@@ -43,8 +43,8 @@ class NodeConnection(threading.Thread):
         self.sock.settimeout(10.0)
 
         self.main_node.debug_print(
-            "NodeConnection.send: Started with client (" + self.id + ") '" + self.host + ":" + str(
-                self.port) + "'")
+            f"NodeConnection.send: Started with client ({self.id}) '{self.host}:{self.port}'"
+            )
 
     def send(self, data: Union[str, dict, bytes], encoding_type: str = 'utf-8'):
         """Send the data to the connected node. The data can be pure text (str), dict object (send as json) and bytes
@@ -57,8 +57,7 @@ class NodeConnection(threading.Thread):
 
             except Exception as e:  # Fixed issue #19: When sending is corrupted, close the connection
                 self.main_node.debug_print(
-                    "nodeconnection send: Error sending data to node: " + str(
-                        e))
+                    f"nodeconnection send: Error sending data to node: {e}")
                 self.stop()  # Stopping node due to failure
 
         elif isinstance(data, dict):
@@ -73,8 +72,7 @@ class NodeConnection(threading.Thread):
 
             except Exception as e:  # Fixed issue #19: When sending is corrupted, close the connection
                 self.main_node.debug_print(
-                    "nodeconnection send: Error sending data to node: " + str(
-                        e))
+                    f"nodeconnection send: Error sending data to node: {e}")
                 self.stop()  # Stopping node due to failure
 
         elif isinstance(data, bytes):
