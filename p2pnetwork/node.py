@@ -1,13 +1,12 @@
 """
 Python package p2pnet for implementing decentralized peer-to-peer network applications
 """
+from p2pnetwork.nodeconnection import NodeConnection
 import socket
 import time
 import threading
 import random
 import hashlib
-
-from p2pnetwork.nodeconnection import NodeConnection
 
 
 class Node(threading.Thread):
@@ -56,7 +55,7 @@ class Node(threading.Thread):
             self.id = self.generate_id()
 
         else:
-            self.id = str(id) # Make sure the ID is a string!
+            self.id = str(id)  # Make sure the ID is a string!
 
         # Start the TCP/IP server
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -89,7 +88,6 @@ class Node(threading.Thread):
         t = self.host + str(self.port) + str(random.randint(1, 99999999))
         id.update(t.encode('ascii'))
         return id.hexdigest()
-
 
     def init_server(self):
         """Initialization of the TCP/IP server to receive connections. It binds to the given host and port."""
@@ -155,8 +153,8 @@ class Node(threading.Thread):
             sock.connect((host, port))
 
             # Basic information exchange (not secure) of the id's of the nodes!
-            sock.send(self.id.encode('utf-8')) # Send my id to the connected node!
-            connected_node_id = sock.recv(4096).decode('utf-8') # When a node is connected, it sends its id!
+            sock.send(self.id.encode('utf-8'))  # Send my id to the connected node!
+            connected_node_id = sock.recv(4096).decode('utf-8')  # When a node is connected, it sends its id!
 
             # Cannot connect with yourself
             if self.id == connected_node_id:
@@ -203,7 +201,9 @@ class Node(threading.Thread):
             node.stop()
 
         else:
-            self.debug_print("Node disconnect_with_node: cannot disconnect with a node with which we are not connected.")
+            self.debug_print(
+                "Node disconnect_with_node: cannot disconnect with a node with which we are not connected."
+            )
 
     def stop(self):
         """Stop this node and terminate all the connected nodes."""
@@ -223,21 +223,29 @@ class Node(threading.Thread):
            connected these nodes are started again."""
         for node_to_check in self.reconnect_to_nodes:
             found_node = False
-            self.debug_print("reconnect_nodes: Checking node " + node_to_check["host"] + ":" + str(node_to_check["port"]))
+            self.debug_print(
+                "reconnect_nodes: Checking node " + node_to_check["host"] + ":" + str(node_to_check["port"])
+            )
 
             for node in self.nodes_outbound:
                 if node.host == node_to_check["host"] and node.port == node_to_check["port"]:
                     found_node = True
-                    node_to_check["trials"] = 0 # Reset the trials
-                    self.debug_print("reconnect_nodes: Node " + node_to_check["host"] + ":" + str(node_to_check["port"]) + " still running!")
+                    node_to_check["trials"] = 0  # Reset the trials
+                    self.debug_print(
+                        "reconnect_nodes: Node " + node_to_check["host"] + ":" + str(node_to_check["port"])
+                        + " still running!"
+                    )
 
-            if not found_node: # Reconnect with node
+            if not found_node:  # Reconnect with node
                 node_to_check["trials"] += 1
                 if self.node_reconnection_error(node_to_check["host"], node_to_check["port"], node_to_check["trials"]):
-                    self.connect_with_node(node_to_check["host"], node_to_check["port"]) # Perform the actual connection
+                    self.connect_with_node(node_to_check["host"], node_to_check["port"])  # Perform the actual
+                    # connection
 
                 else:
-                    self.debug_print("reconnect_nodes: Removing node (" + node_to_check["host"] + ":" + str(node_to_check["port"]) + ") from the reconnection list!")
+                    self.debug_print(
+                        "reconnect_nodes: Removing node (" + node_to_check["host"] + ":"
+                        + str(node_to_check["port"]) + ") from the reconnection list!")
                     self.reconnect_to_nodes.remove(node_to_check)
 
     def run(self):
@@ -255,10 +263,13 @@ class Node(threading.Thread):
                 if self.max_connections == 0 or len(self.nodes_inbound) < self.max_connections:
 
                     # Basic information exchange (not secure) of the id's of the nodes!
-                    connected_node_id = connection.recv(4096).decode('utf-8') # When a node is connected, it sends it id!
-                    connection.send(self.id.encode('utf-8')) # Send my id to the connected node!
+                    connected_node_id = connection.recv(4096).decode('utf-8')  # When a node is connected,
+                    # it sends it id!
+                    connection.send(self.id.encode('utf-8'))  # Send my id to the connected node!
 
-                    thread_client = self.create_new_connection(connection, connected_node_id, client_address[0], client_address[1])
+                    thread_client = self.create_new_connection(
+                        connection, connected_node_id, client_address[0], client_address[1]
+                    )
                     thread_client.start()
 
                     self.nodes_inbound.append(thread_client)
@@ -299,7 +310,7 @@ class Node(threading.Thread):
         print("Node stopped")
 
     def outbound_node_connected(self, node):
-        """This method is invoked when a connection with a outbound node was successfull. The node made
+        """This method is invoked when a connection with a outbound node was successful. The node made
            the connection itself."""
         self.debug_print("outbound_node_connected: " + node.id)
         if self.callback is not None:
@@ -365,18 +376,21 @@ class Node(threading.Thread):
 
     def node_request_to_stop(self):
         """This method is invoked just before we will stop. A request has been given to stop the node and close
-           all the node connections. It could be used to say goodbey to everyone."""
+           all the node connections. It could be used to say goodbye to everyone."""
         self.debug_print("node is requested to stop!")
         if self.callback is not None:
             self.callback("node_request_to_stop", self, {}, {})
 
     def node_reconnection_error(self, host, port, trials):
         """This method is invoked when a reconnection error occurred. The node connection is disconnected and the
-           flag for reconnection is set to True for this node. This function can be overidden to implement your
+           flag for reconnection is set to True for this node. This function can be overridden to implement your
            specific logic to take action when a lot of trials have been done. If the method returns True, the
            node will try to perform the reconnection. If the method returns False, the node will stop reconnecting
            to this node. The node will forever tries to perform the reconnection."""
-        self.debug_print("node_reconnection_error: Reconnecting to node " + host + ":" + str(port) + " (trials: " + str(trials) + ")")
+        self.debug_print(
+            "node_reconnection_error: Reconnecting to node " + host + ":" + str(port)
+            + " (trials: " + str(trials) + ")"
+        )
         return True
 
     def __str__(self):

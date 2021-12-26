@@ -4,11 +4,11 @@ to see whether the node is correctly handling this.
 TODO: testing sending bytes
 TODO: buffer overflow testing
 """
+from p2pnetwork.node import Node
 import unittest
 import time
 import struct
 
-from p2pnetwork.node import Node
 
 
 class TestNode(unittest.TestCase):
@@ -19,17 +19,17 @@ class TestNode(unittest.TestCase):
         global messages
         messages = []
 
-        class MyTestNode (Node):
+        class MyTestNode(Node):
             def __init__(self, host, port):
                 super(MyTestNode, self).__init__(host, port, None)
                 global messages
                 messages.append("mytestnode started")
-               
+
             def node_message(self, node, data):
                 global messages
                 messages.append(type(data))
                 messages.append(len(data))
-                
+
         node1 = MyTestNode("127.0.0.1", 10001)
         node2 = MyTestNode("127.0.0.1", 10002)
         node3 = MyTestNode("127.0.0.1", 10003)
@@ -66,34 +66,34 @@ class TestNode(unittest.TestCase):
 
         self.assertTrue(len(messages) > 0, "There should have been sent some messages around!")
         self.assertEqual(len(messages), 23, "There should have been sent 23 message around!")
-        
-        self.assertEqual(messages[0],  "mytestnode started", "MyTestNode should have seen this event!")
-        self.assertEqual(messages[1],  "mytestnode started", "MyTestNode should have seen this event!")
-        self.assertEqual(messages[2],  "mytestnode started", "MyTestNode should have seen this event!")
+
+        self.assertEqual(messages[0], "mytestnode started", "MyTestNode should have seen this event!")
+        self.assertEqual(messages[1], "mytestnode started", "MyTestNode should have seen this event!")
+        self.assertEqual(messages[2], "mytestnode started", "MyTestNode should have seen this event!")
 
         # Check if all the message are correctly received
         for i in range(0, 10, 2):
-            self.assertEqual(str(messages[3+i]),  "<class 'str'>")
-            self.assertEqual(messages[4+i],  5000)
+            self.assertEqual(str(messages[3 + i]), "<class 'str'>")
+            self.assertEqual(messages[4 + i], 5000)
 
     def test_node_send_data_dict(self):
         """Testing whether NodeConnections handle sending dict well enough."""
         global messages
         messages = []
 
-        class MyTestNode (Node):
+        class MyTestNode(Node):
             def __init__(self, host, port):
                 super(MyTestNode, self).__init__(host, port, None)
                 global messages
                 messages.append("mytestnode started")
-               
+
             def node_message(self, node, data):
                 global messages
                 messages.append(type(data))
                 messages.append(len(data["values"]))
                 # messages.append("instance byte:" + isinstance(data, bytes))
                 # Check the message here wether it is correct!
-                
+
         node1 = MyTestNode("127.0.0.1", 10001)
         node2 = MyTestNode("127.0.0.1", 10002)
         node3 = MyTestNode("127.0.0.1", 10003)
@@ -109,9 +109,9 @@ class TestNode(unittest.TestCase):
         time.sleep(2)
 
         # Create large message; large than used buffer 4096!
-        data = { "type": "My Dict",
-                 "values": []
-        }
+        data = {"type": "My Dict",
+                "values": []
+                }
         for i in range(5000):
             data["values"].append("i: " + str(i))
 
@@ -132,12 +132,12 @@ class TestNode(unittest.TestCase):
 
         self.assertTrue(len(messages) > 0, "There should have been sent some messages around!")
         self.assertEqual(len(messages), 23, "There should have been sent 23 message around!")
-        
-        self.assertEqual(messages[0],  "mytestnode started", "MyTestNode should have seen this event!")
-        self.assertEqual(messages[1],  "mytestnode started", "MyTestNode should have seen this event!")
-        self.assertEqual(messages[2],  "mytestnode started", "MyTestNode should have seen this event!")
+
+        self.assertEqual(messages[0], "mytestnode started", "MyTestNode should have seen this event!")
+        self.assertEqual(messages[1], "mytestnode started", "MyTestNode should have seen this event!")
+        self.assertEqual(messages[2], "mytestnode started", "MyTestNode should have seen this event!")
 
         # Check if all the message are correctly received
         for i in range(0, 10, 2):
-            self.assertEqual(str(messages[3+i]),  "<class 'dict'>")
-            self.assertEqual(messages[4+i],  5000)
+            self.assertEqual(str(messages[3 + i]), "<class 'dict'>")
+            self.assertEqual(messages[4 + i], 5000)

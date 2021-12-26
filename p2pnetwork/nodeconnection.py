@@ -8,9 +8,9 @@ class NodeConnection(threading.Thread):
     """The class NodeConnection is used by the class Node and represent the TCP/IP socket connection with another node.
 
        Both inbound (nodes that connect with the server) and outbound (nodes that are connected to) are represented by
-       this class. The class contains the client socket and hold the id information of the connecting node. Communication
-       is done by this class. When a connecting node sends a message, the message is relayed to the main node (that created
-       this NodeConnection in the first place).
+       this class. The class contains the client socket and hold the id information of the connecting node.
+       Communication is done by this class. When a connecting node sends a message, the message is relayed to the
+       main node (that created this NodeConnection in the first place).
        
        Instantiates a new NodeConnection. Do not forget to start the thread. All TCP/IP communication is handled by this 
        connection.
@@ -46,10 +46,10 @@ class NodeConnection(threading.Thread):
                 self.port) + "'")
 
     def send(self, data, encoding_type='utf-8'):
-        """Send the data to the connected node. The data can be pure text (str), dict object (send as json) and bytes object.
-           When sending bytes object, it will be using standard socket communication. A end of transmission character 0x04 
-           utf-8/ascii will be used to decode the packets ate the other node. When the socket is corrupted the node connection
-           is closed."""
+        """Send the data to the connected node. The data can be pure text (str), dict object (send as json) and bytes
+        object. When sending bytes object, it will be using standard socket communication. A end of transmission
+        character 0x04 utf-8/ascii will be used to decode the packets ate the other node. When the socket is
+        corrupted the node connection is closed. """
         if isinstance(data, str):
             try:
                 self.sock.sendall(data.encode(encoding_type) + self.EOT_CHAR)
@@ -140,11 +140,13 @@ class NodeConnection(threading.Thread):
 
             time.sleep(0.01)
 
-        # IDEA: Invoke (event) a method in main_node so the user is able to send a bye message to the node before it is closed?
+        # IDEA: Invoke (event) a method in main_node so the user
+        # is able to send a bye message to the node before it is closed?
         self.sock.settimeout(None)
         self.sock.close()
-        self.main_node.node_disconnected(
-            self)  # Fixed issue #19: Send to main_node when a node is disconnected. We do not know whether it is inbounc or outbound.
+        # Fixed issue #19: Send to main_node when a node is disconnected.
+        # We do not know whether it is inbound or outbound.
+        self.main_node.node_disconnected(self)
         self.main_node.debug_print("NodeConnection: Stopped")
 
     def set_info(self, key, value):
