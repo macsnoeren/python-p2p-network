@@ -107,18 +107,11 @@ class Node(threading.Thread):
         """ Send a message to all the nodes that are connected with this node. data is a python variable which is
             converted to JSON that is send over to the other node. exclude list gives all the nodes to which this
             data should not be sent."""
-        self.message_count_send = self.message_count_send + 1
-        for n in self.nodes_inbound:
-            if n in exclude:
-                self.debug_print("Node send_to_nodes: Excluding node in sending the message")
-            else:
-                self.send_to_node(n, data)
-
-        for n in self.nodes_outbound:
-            if n in exclude:
-                self.debug_print("Node send_to_nodes: Excluding node in sending the message")
-            else:
-                self.send_to_node(n, data)
+        # TODO: Check if this is correct. Message count is updated also in send_to_node.
+        self.message_count_send += 1
+        nodes = filter(lambda node: node not in exclude, self.all_nodes)
+        for n in nodes:
+            self.send_to_node(n, data)
 
     def send_to_node(self, n: NodeConnection, data: Union[str, dict, bytes]) -> None:
         """ Send the data to the node n if it exists."""
