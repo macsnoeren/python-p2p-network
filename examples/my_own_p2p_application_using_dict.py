@@ -1,15 +1,10 @@
-#######################################################################################################################
-# Author: Maurice Snoeren                                                                                             #
-# Version: 0.1 beta (use at your own risk)                                                                            #
-#                                                                                                                     #
-# This example show how to derive a own Node class (MyOwnPeer2PeerNode) from p2pnet.Node to implement your own Node   #
-# implementation. See the MyOwnPeer2PeerNode.py for all the details. In that class all your own application specific  #
-# details are coded.                                                                                                  #
-#######################################################################################################################
-
+"""This example show how to derive a own Node class (MyOwnPeer2PeerNode) from p2pnet.Node to implement your own Node
+implementation. See the MyOwnPeer2PeerNode.py for all the details. In that class all your own application specific
+details are coded."""
 import sys
 import time
-sys.path.insert(0, '..') # Import the files where the modules are located
+
+sys.path.insert(0, '..')  # Import the files where the modules are located
 
 from MyOwnPeer2PeerNode import MyOwnPeer2PeerNode
 
@@ -31,7 +26,7 @@ node_3.connect_with_node('127.0.0.1', 8001)
 
 time.sleep(2)
 
-node_1.send_to_nodes({ "name" : "Maurice", "number" : 11 })
+node_1.send_to_nodes({"name": "Maurice", "number": 11})
 
 time.sleep(5)
 
