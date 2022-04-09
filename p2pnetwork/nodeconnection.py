@@ -59,7 +59,13 @@ class NodeConnection(threading.Thread):
         """Send the data to the connected node. The data can be pure text (str), dict object (send as json) and bytes object.
            When sending bytes object, it will be using standard socket communication. A end of transmission character 0x04 
            utf-8/ascii will be used to decode the packets ate the other node. When the socket is corrupted the node connection
-           is closed."""
+           is closed.
+           feature_compression: To reduce network bandwidth we can use compression to send the data to the other end.
+                                This feature will add also the compression feature, the other end needs to know whether it is
+                                compressed. This method shall still take bytes, str and dict into account. From now on, also
+                                compression can be set for bytes, str and dict. The other end detects the compression and will
+                                extract it and you then get again bytes, str or dict.
+           """
         if isinstance(data, str):
             try:
                 self.sock.sendall( data.encode(encoding_type) + self.EOT_CHAR )
