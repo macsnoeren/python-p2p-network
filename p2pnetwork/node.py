@@ -98,7 +98,6 @@ class Node(threading.Thread):
         t = self.host + str(self.port) + str(random.randint(1, 99999999))
         id.update(t.encode('ascii'))
         return id.hexdigest()
-        
 
     def init_server(self):
         """Initialization of the TCP/IP server to receive connections. It binds to the given host and port."""
@@ -164,7 +163,7 @@ class Node(threading.Thread):
             sock.connect((host, port))
 
             # Basic information exchange (not secure) of the id's of the nodes!
-            sock.send(self.id.encode('utf-8')) # Send my id to the connected node!
+            sock.send((self.id + ":" + str(self.port)).encode('utf-8')) # Send my id and port to the connected node!
             connected_node_id = sock.recv(4096).decode('utf-8') # When a node is connected, it sends its id!
 
             # Cannot connect with yourself
@@ -263,10 +262,13 @@ class Node(threading.Thread):
                 if self.max_connections == 0 or len(self.nodes_inbound) < self.max_connections:
                     
                     # Basic information exchange (not secure) of the id's of the nodes!
-                    connected_node_id = connection.recv(4096).decode('utf-8') # When a node is connected, it sends it id!
+                    connected_node_port = client_address[1] # backward compatibilty
+                    connected_node_id   = connection.recv(4096).decode('utf-8')
+                    if ":" in connected_node_id:
+                        (connected_node_id, connected_node_port) = connected_node_id.split(':') # When a node is connected, it sends it id!
                     connection.send(self.id.encode('utf-8')) # Send my id to the connected node!
 
-                    thread_client = self.create_new_connection(connection, connected_node_id, client_address[0], client_address[1])
+                    thread_client = self.create_new_connection(connection, connected_node_id, client_address[0], connected_node_port)
                     thread_client.start()
 
                     self.nodes_inbound.append(thread_client)

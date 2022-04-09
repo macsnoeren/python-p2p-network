@@ -53,7 +53,7 @@ class NodeConnection(threading.Thread):
         # Use socket timeout to determine problems with the connection
         self.sock.settimeout(10.0)
 
-        self.main_node.debug_print("NodeConnection.send: Started with client (" + self.id + ") '" + self.host + ":" + str(self.port) + "'")
+        self.main_node.debug_print("NodeConnection: Started with client (" + self.id + ") '" + self.host + ":" + str(self.port) + "'")
 
     def send(self, data, encoding_type='utf-8'):
         """Send the data to the connected node. The data can be pure text (str), dict object (send as json) and bytes object.
