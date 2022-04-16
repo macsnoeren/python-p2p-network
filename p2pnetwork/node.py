@@ -113,7 +113,7 @@ class Node(threading.Thread):
         print("- Total nodes connected with us: %d" % len(self.nodes_inbound))
         print("- Total nodes connected to     : %d" % len(self.nodes_outbound))
 
-    def send_to_nodes(self, data, exclude=[]):
+    def send_to_nodes(self, data, exclude=[], compression='none'):
         """ Send a message to all the nodes that are connected with this node. data is a python variable which is
             converted to JSON that is send over to the other node. exclude list gives all the nodes to which this
             data should not be sent."""
@@ -122,19 +122,19 @@ class Node(threading.Thread):
             if n in exclude:
                 self.debug_print("Node send_to_nodes: Excluding node in sending the message")
             else:
-                self.send_to_node(n, data)
+                self.send_to_node(n, data, compression)
 
         for n in self.nodes_outbound:
             if n in exclude:
                 self.debug_print("Node send_to_nodes: Excluding node in sending the message")
             else:
-                self.send_to_node(n, data)
+                self.send_to_node(n, data, compression)
 
-    def send_to_node(self, n, data):
+    def send_to_node(self, n, data, compression='none'):
         """ Send the data to the node n if it exists."""
         self.message_count_send = self.message_count_send + 1
         if n in self.nodes_inbound or n in self.nodes_outbound:
-            n.send(data)
+            n.send(data, compression='zlib')
 
         else:
             self.debug_print("Node send_to_node: Could not send the data, node is not found!")

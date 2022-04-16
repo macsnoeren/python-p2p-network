@@ -2,6 +2,7 @@ import socket
 import time
 import threading
 import json
+import zlib, bz2, lzma, base64
 
 """
 Author : Maurice Snoeren <macsnoeren(at)gmail.com>
@@ -55,20 +56,73 @@ class NodeConnection(threading.Thread):
 
         self.main_node.debug_print("NodeConnection: Started with client (" + self.id + ") '" + self.host + ":" + str(self.port) + "'")
 
-    def send(self, data, encoding_type='utf-8'):
+    def compress(self, data, type):
+        """Compresses the data given the type. It is used to provide compression to lower the network traffic in case of
+           large data chunks."""
+
+        self.main_node.debug_print(self.id + ":compress")
+        self.main_node.debug_print(self.id + ":compress:input: " + str(data))
+        compressed = data
+
+        try:
+            if type == 'zlib':
+                compressed = zlib.compress(data, 6) + b'zlib'
+            
+            elif type == 'bzip2':
+                compressed = bz2.compress(data) + b'bzip2'
+            
+            elif type == 'lzma':
+                compressed = lzma.compress(data) + b'lzma'
+
+        except Exception as e:
+            self.main_node.debug_print("compress: exception: " + str(e))
+
+        self.main_node.debug_print(self.id + ":compress:result:" + str(compressed))
+        compressed = base64.b64encode(compressed)
+        self.main_node.debug_print(self.id + ":compress:base64:" + str(compressed))
+
+        return compressed
+
+    def decompress(self, compressed):
+        """Decompresses the data given the type. It is used to provide compression to lower the network traffic in case of
+           large data chunks."""
+        
+        print(self.id + ":decompress")
+        print(self.id + ":decompress:input1: " + str(compressed))
+        compressed = base64.b64decode(compressed)
+        print(self.id + ":decompress:input2: " + str(compressed))
+        print(self.id + ":decompress:lzma?: " + str(compressed[-4:]))
+        data = compressed
+
+        try:
+            if compressed[-4:] == b'zlib':
+                data = zlib.decompress(compressed[0:len(compressed)-4])
+            
+            elif compressed[-5:] == b'bzip2':
+                data = bz2.decompress(compressed[0:len(compressed)-5])
+            
+            elif compressed[-4:] == b'lzma':
+                data = lzma.decompress(compressed[0:len(compressed)-4])
+
+        except Exception as e:
+            print("Exception: " + str(e))
+
+        print(self.id + ":decompress:result: " + str(data))
+        return data
+
+    def send(self, data, encoding_type='utf-8', compression='none'):
         """Send the data to the connected node. The data can be pure text (str), dict object (send as json) and bytes object.
            When sending bytes object, it will be using standard socket communication. A end of transmission character 0x04 
            utf-8/ascii will be used to decode the packets ate the other node. When the socket is corrupted the node connection
-           is closed.
-           feature_compression: To reduce network bandwidth we can use compression to send the data to the other end.
-                                This feature will add also the compression feature, the other end needs to know whether it is
-                                compressed. This method shall still take bytes, str and dict into account. From now on, also
-                                compression can be set for bytes, str and dict. The other end detects the compression and will
-                                extract it and you then get again bytes, str or dict.
+           is closed. Compression can be enabled by using zlib, bzip2 or lzma. When enabled the data is compressed and send to
+           the client. This could reduce the network bandwith when sending large data chunks.
            """
+
+        print("send: " + compression)
+
         if isinstance(data, str):
             try:
-                self.sock.sendall( data.encode(encoding_type) + self.EOT_CHAR )
+                self.sock.sendall( self.compress(data.encode(encoding_type), compression) + self.EOT_CHAR )
 
             except Exception as e: # Fixed issue #19: When sending is corrupted, close the connection
                 self.main_node.debug_print("nodeconnection send: Error sending data to node: " + str(e))
@@ -76,9 +130,9 @@ class NodeConnection(threading.Thread):
 
         elif isinstance(data, dict):
             try:
-                json_data = json.dumps(data)
-                json_data = json_data.encode(encoding_type) + self.EOT_CHAR
-                self.sock.sendall(json_data)
+                data = json.dumps(data)
+                data = self.compress(data.encode(encoding_type), compression) + self.EOT_CHAR
+                self.sock.sendall(data)
                 
             except TypeError as type_error:
                 self.main_node.debug_print('This dict is invalid')
@@ -89,7 +143,7 @@ class NodeConnection(threading.Thread):
                 self.stop() # Stopping node due to failure
 
         elif isinstance(data, bytes):
-            bin_data = data + self.EOT_CHAR
+            bin_data = self.compress(data, compression) + self.EOT_CHAR
             self.sock.sendall(bin_data)
 
         else:
@@ -149,6 +203,7 @@ class NodeConnection(threading.Thread):
                 while eot_pos > 0:
                     packet = buffer[:eot_pos]
                     buffer = buffer[eot_pos + 1:]
+                    packet = self.decompress(packet)
 
                     self.main_node.message_count_recv += 1
                     self.main_node.node_message( self, self.parse_packet(packet) )
