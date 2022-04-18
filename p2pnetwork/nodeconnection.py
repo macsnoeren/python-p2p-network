@@ -83,7 +83,9 @@ class NodeConnection(threading.Thread):
         except Exception as e:
             self.main_node.debug_print("compress: exception: " + str(e))
 
-        self.main_node.debug_print(self.id + ":compress:base64:" + str(compressed))
+        self.main_node.debug_print(self.id + ":compress:b64encode:" + str(compressed))
+        self.main_node.debug_print(self.id + ":compress:compression:" + str(int(10000*len(compressed)/len(data))/100) + "%")
+
 
         return compressed
 
@@ -92,7 +94,7 @@ class NodeConnection(threading.Thread):
            large data chunks."""
         self.main_node.debug_print(self.id + ":decompress:input: " + str(compressed))
         compressed = base64.b64decode(compressed)
-        self.main_node.debug_print(self.id + ":decompress:b54decode: " + str(compressed))
+        self.main_node.debug_print(self.id + ":decompress:b64decode: " + str(compressed))
 
         try:
             if compressed[-4:] == b'zlib':
