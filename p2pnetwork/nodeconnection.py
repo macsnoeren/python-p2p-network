@@ -48,6 +48,9 @@ class NodeConnection(threading.Thread):
         # End of transmission character for the network streaming messages.
         self.EOT_CHAR = 0x04.to_bytes(1, 'big')
 
+        # Indication that the message has been compressed
+        self.COMPR_CHAR = 0x02.to_bytes(1, 'big')
+
         # Datastore to store additional information concerning the node.
         self.info = {}
 
@@ -56,29 +59,30 @@ class NodeConnection(threading.Thread):
 
         self.main_node.debug_print("NodeConnection: Started with client (" + self.id + ") '" + self.host + ":" + str(self.port) + "'")
 
-    def compress(self, data, type):
+    def compress(self, data, compression):
         """Compresses the data given the type. It is used to provide compression to lower the network traffic in case of
-           large data chunks."""
+           large data chunks. It stores the compression type inside the data, so it can be easily retrieved."""
 
-        self.main_node.debug_print(self.id + ":compress")
+        self.main_node.debug_print(self.id + ":compress:" + compression)
         self.main_node.debug_print(self.id + ":compress:input: " + str(data))
         compressed = data
 
         try:
-            if type == 'zlib':
-                compressed = zlib.compress(data, 6) + b'zlib'
+            if compression == 'zlib':
+                compressed = base64.b64encode( zlib.compress(data, 6) + b'zlib' )
             
-            elif type == 'bzip2':
-                compressed = bz2.compress(data) + b'bzip2'
+            elif compression == 'bzip2':
+                compressed = base64.b64encode( bz2.compress(data) + b'bzip2' )
             
-            elif type == 'lzma':
-                compressed = lzma.compress(data) + b'lzma'
+            elif compression == 'lzma':
+                compressed = base64.b64encode( lzma.compress(data) + b'lzma' )
+
+            else:
+                self.main_node.debug_print(self.id + ":compress:Unknown compression")
 
         except Exception as e:
             self.main_node.debug_print("compress: exception: " + str(e))
 
-        self.main_node.debug_print(self.id + ":compress:result:" + str(compressed))
-        compressed = base64.b64encode(compressed)
         self.main_node.debug_print(self.id + ":compress:base64:" + str(compressed))
 
         return compressed
@@ -86,29 +90,25 @@ class NodeConnection(threading.Thread):
     def decompress(self, compressed):
         """Decompresses the data given the type. It is used to provide compression to lower the network traffic in case of
            large data chunks."""
-        
-        print(self.id + ":decompress")
-        print(self.id + ":decompress:input1: " + str(compressed))
+        self.main_node.debug_print(self.id + ":decompress:input: " + str(compressed))
         compressed = base64.b64decode(compressed)
-        print(self.id + ":decompress:input2: " + str(compressed))
-        print(self.id + ":decompress:lzma?: " + str(compressed[-4:]))
-        data = compressed
+        self.main_node.debug_print(self.id + ":decompress:b54decode: " + str(compressed))
 
         try:
             if compressed[-4:] == b'zlib':
-                data = zlib.decompress(compressed[0:len(compressed)-4])
+                compressed = zlib.decompress(compressed[0:len(compressed)-4])
             
             elif compressed[-5:] == b'bzip2':
-                data = bz2.decompress(compressed[0:len(compressed)-5])
+                compressed = bz2.decompress(compressed[0:len(compressed)-5])
             
             elif compressed[-4:] == b'lzma':
-                data = lzma.decompress(compressed[0:len(compressed)-4])
-
+                compressed = lzma.decompress(compressed[0:len(compressed)-4])
         except Exception as e:
             print("Exception: " + str(e))
 
-        print(self.id + ":decompress:result: " + str(data))
-        return data
+        self.main_node.debug_print(self.id + ":decompress:result: " + str(compressed))
+
+        return compressed
 
     def send(self, data, encoding_type='utf-8', compression='none'):
         """Send the data to the connected node. The data can be pure text (str), dict object (send as json) and bytes object.
@@ -117,12 +117,13 @@ class NodeConnection(threading.Thread):
            is closed. Compression can be enabled by using zlib, bzip2 or lzma. When enabled the data is compressed and send to
            the client. This could reduce the network bandwith when sending large data chunks.
            """
-
-        print("send: " + compression)
-
         if isinstance(data, str):
             try:
-                self.sock.sendall( self.compress(data.encode(encoding_type), compression) + self.EOT_CHAR )
+                if compression == 'none':
+                    self.sock.sendall( data.encode(encoding_type) + self.EOT_CHAR )
+                else:
+                    data = self.compress(data.encode(encoding_type), compression)
+                    self.sock.sendall(data + self.COMPR_CHAR + self.EOT_CHAR)
 
             except Exception as e: # Fixed issue #19: When sending is corrupted, close the connection
                 self.main_node.debug_print("nodeconnection send: Error sending data to node: " + str(e))
@@ -130,10 +131,12 @@ class NodeConnection(threading.Thread):
 
         elif isinstance(data, dict):
             try:
-                data = json.dumps(data)
-                data = self.compress(data.encode(encoding_type), compression) + self.EOT_CHAR
-                self.sock.sendall(data)
-                
+                if compression == 'none':
+                    self.sock.sendall(json.dumps(data).encode(encoding_type) + self.EOT_CHAR)
+                else:
+                    data = self.compress(json.dumps(data).encode(encoding_type), compression)
+                    self.sock.sendall(data + self.COMPR_CHAR + self.EOT_CHAR)
+
             except TypeError as type_error:
                 self.main_node.debug_print('This dict is invalid')
                 self.main_node.debug_print(type_error)
@@ -143,25 +146,30 @@ class NodeConnection(threading.Thread):
                 self.stop() # Stopping node due to failure
 
         elif isinstance(data, bytes):
-            bin_data = self.compress(data, compression) + self.EOT_CHAR
-            self.sock.sendall(bin_data)
+            try:
+                if compression == 'none':
+                    self.sock.sendall(data + self.EOT_CHAR)
+                else:
+                    data = self.compress(data, compression)
+                    self.sock.sendall(data + self.COMPR_CHAR + self.EOT_CHAR)
+
+            except Exception as e: # Fixed issue #19: When sending is corrupted, close the connection
+                self.main_node.debug_print("nodeconnection send: Error sending data to node: " + str(e))
+                self.stop() # Stopping node due to failure
 
         else:
             self.main_node.debug_print('datatype used is not valid plese use str, dict (will be send as json) or bytes')
 
-    # This method should be implemented by yourself! We do not know when the message is
-    # correct.
-    # def check_message(self, data):
-    #         return True
-
-    # Stop the node client. Please make sure you join the thread.
     def stop(self):
-        """Terminates the connection and the thread is stopped."""
+        """Terminates the connection and the thread is stopped. Stop the node client. Please make sure you join the thread."""
         self.terminate_flag.set()
 
     def parse_packet(self, packet):
         """Parse the packet and determines wheter it has been send in str, json or byte format. It returns
            the according data."""
+        if packet.find(self.COMPR_CHAR) == len(packet)-1: # Check if packet was compressed
+            packet = self.decompress(packet[0:-1])
+
         try:
             packet_decoded = packet.decode('utf-8')
 
@@ -203,7 +211,6 @@ class NodeConnection(threading.Thread):
                 while eot_pos > 0:
                     packet = buffer[:eot_pos]
                     buffer = buffer[eot_pos + 1:]
-                    packet = self.decompress(packet)
 
                     self.main_node.message_count_recv += 1
                     self.main_node.node_message( self, self.parse_packet(packet) )

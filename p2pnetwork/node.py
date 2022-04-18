@@ -134,7 +134,7 @@ class Node(threading.Thread):
         """ Send the data to the node n if it exists."""
         self.message_count_send = self.message_count_send + 1
         if n in self.nodes_inbound or n in self.nodes_outbound:
-            n.send(data, compression='zlib')
+            n.send(data, compression)
 
         else:
             self.debug_print("Node send_to_node: Could not send the data, node is not found!")
