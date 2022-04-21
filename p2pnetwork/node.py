@@ -116,7 +116,8 @@ class Node(threading.Thread):
     def send_to_nodes(self, data, exclude=[], compression='none'):
         """ Send a message to all the nodes that are connected with this node. data is a python variable which is
             converted to JSON that is send over to the other node. exclude list gives all the nodes to which this
-            data should not be sent."""
+            data should not be sent.
+            TODO: When sending was not successfull, the user is not notified."""
         self.message_count_send = self.message_count_send + 1
         for n in self.nodes_inbound:
             if n in exclude:

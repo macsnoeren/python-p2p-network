@@ -65,6 +65,7 @@ class NodeConnection(threading.Thread):
 
         self.main_node.debug_print(self.id + ":compress:" + compression)
         self.main_node.debug_print(self.id + ":compress:input: " + str(data))
+
         compressed = data
 
         try:
@@ -79,13 +80,13 @@ class NodeConnection(threading.Thread):
 
             else:
                 self.main_node.debug_print(self.id + ":compress:Unknown compression")
+                return None
 
         except Exception as e:
             self.main_node.debug_print("compress: exception: " + str(e))
 
         self.main_node.debug_print(self.id + ":compress:b64encode:" + str(compressed))
         self.main_node.debug_print(self.id + ":compress:compression:" + str(int(10000*len(compressed)/len(data))/100) + "%")
-
 
         return compressed
 
@@ -125,7 +126,8 @@ class NodeConnection(threading.Thread):
                     self.sock.sendall( data.encode(encoding_type) + self.EOT_CHAR )
                 else:
                     data = self.compress(data.encode(encoding_type), compression)
-                    self.sock.sendall(data + self.COMPR_CHAR + self.EOT_CHAR)
+                    if data != None:
+                        self.sock.sendall(data + self.COMPR_CHAR + self.EOT_CHAR)
 
             except Exception as e: # Fixed issue #19: When sending is corrupted, close the connection
                 self.main_node.debug_print("nodeconnection send: Error sending data to node: " + str(e))
@@ -137,7 +139,8 @@ class NodeConnection(threading.Thread):
                     self.sock.sendall(json.dumps(data).encode(encoding_type) + self.EOT_CHAR)
                 else:
                     data = self.compress(json.dumps(data).encode(encoding_type), compression)
-                    self.sock.sendall(data + self.COMPR_CHAR + self.EOT_CHAR)
+                    if data != None:
+                        self.sock.sendall(data + self.COMPR_CHAR + self.EOT_CHAR)
 
             except TypeError as type_error:
                 self.main_node.debug_print('This dict is invalid')
@@ -153,7 +156,8 @@ class NodeConnection(threading.Thread):
                     self.sock.sendall(data + self.EOT_CHAR)
                 else:
                     data = self.compress(data, compression)
-                    self.sock.sendall(data + self.COMPR_CHAR + self.EOT_CHAR)
+                    if data != None:
+                        self.sock.sendall(data + self.COMPR_CHAR + self.EOT_CHAR)
 
             except Exception as e: # Fixed issue #19: When sending is corrupted, close the connection
                 self.main_node.debug_print("nodeconnection send: Error sending data to node: " + str(e))
