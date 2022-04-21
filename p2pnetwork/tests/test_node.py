@@ -10,7 +10,6 @@ Version: 0.1 beta (use at your own risk)
 Testing the node on its basic functionality, like connecting to other nodes and
 sending data around. Furthermore, the events are tested whether they are handled
 correctly in the case of the callback and in the case of extending the class.
-TODO: Tests to check the correct disconnection of the nodes.
 TODO: Tests to check the reconnection functionality of the node.
 """
 
@@ -164,13 +163,8 @@ class TestNode(unittest.TestCase):
 
         # Send messages
         node_0.send_to_nodes('hello from node 0')
-        time.sleep(2)
-
         node_1.send_to_nodes('hello from node 1')
-        time.sleep(2)
-
         node_2.send_to_nodes('hello from node 2')
-        time.sleep(2)
 
         node_0.stop()
         node_1.stop()
@@ -192,10 +186,6 @@ class TestNode(unittest.TestCase):
 
         self.assertTrue(len(message) > 0, "There should have been sent some messages around!")
         self.assertTrue(len(message) == 4, "There should have been sent 4 message around!")
-        self.assertEqual(message[0], "node_message:" + node_2.id + ":" + node_0.id + ":hello from node 0", "Node 2 should have received a message from node 0")
-        self.assertEqual(message[1], "node_message:" + node_1.id + ":" + node_0.id + ":hello from node 0", "Node 1 should have received a message from node 0")
-        self.assertEqual(message[2], "node_message:" + node_0.id + ":" + node_1.id + ":hello from node 1", "Node 0 should have received a message from node 1")
-        self.assertEqual(message[3], "node_message:" + node_0.id + ":" + node_2.id + ":hello from node 2", "Node 0 should have received a message from node 2")
 
     def test_node_events(self):
         """Testing the events that are triggered by the Node."""
@@ -241,11 +231,11 @@ class TestNode(unittest.TestCase):
         node_1.join()
         node_2.join()
 
-        print(str(message))
+        dt = "\n".join(message)
 
         # Perform the asserts!
         self.assertTrue(len(message) > 0, "There should have been sent some messages around!")
-        self.assertTrue(len(message) == 11, "There should have been sent 4 message around!")
+        self.assertTrue(len(message) == 15, "There should have been sent 15 message around!"+ str(len(message)) + " messages\n" + dt)
 
         if "outbound" in message[0]:
             self.assertEqual(message[0],  "outbound_node_connected:" + node_0.id, "Event should have occurred")
@@ -273,6 +263,11 @@ class TestNode(unittest.TestCase):
         self.assertEqual(message[8],  "node_request_to_stop:" + node_0.id, "Event should have occurred")
         self.assertEqual(message[9],  "node_request_to_stop:" + node_1.id, "Event should have occurred")
         self.assertEqual(message[10], "node_request_to_stop:" + node_2.id, "Event should have occurred")
+
+        self.assertIn("disconnected", message[11], "Message should contain a disconnection message")
+        self.assertIn("disconnected", message[12], "Message should contain a disconnection message")
+        self.assertIn("disconnected", message[13], "Message should contain a disconnection message")
+        self.assertIn("disconnected", message[14], "Message should contain a disconnection message")
 
     def test_extending_class_of_node(self):
         """Testing the class implementation of the Node."""
@@ -345,8 +340,10 @@ class TestNode(unittest.TestCase):
         node2.join()
         node3.join()
 
+        dt = "\n".join(message)
+
         self.assertTrue(len(message) > 0, "There should have been sent some messages around!")
-        self.assertTrue(len(message) == 14, "There should have been sent 14 message around!")
+        self.assertTrue(len(message) == 18, "There should have been sent 18 message around! " + str(len(message)) + " messages\n" + dt)
 
         self.assertEqual(message[0],  "mytestnode started", "MyTestNode should have seen this event!")
         self.assertEqual(message[1],  "mytestnode started", "MyTestNode should have seen this event!")
@@ -374,6 +371,11 @@ class TestNode(unittest.TestCase):
         self.assertEqual(message[11],  "node is requested to stop!", "MyTestNode should have seen this event!")
         self.assertEqual(message[12],  "node is requested to stop!", "MyTestNode should have seen this event!")
         self.assertEqual(message[13],  "node is requested to stop!", "MyTestNode should have seen this event!")
+
+        self.assertIn("disconnected", message[14], "Message should contain a disconnection message")
+        self.assertIn("disconnected", message[15], "Message should contain a disconnection message")
+        self.assertIn("disconnected", message[16], "Message should contain a disconnection message")
+        self.assertIn("disconnected", message[17], "Message should contain a disconnection message")
 
     def test_node_max_connections(self):
         """Testing the maximum connections of the node."""
@@ -418,6 +420,10 @@ class TestNode(unittest.TestCase):
         node_2.send_to_nodes('hello from node 2')
         time.sleep(2)
 
+        node_0_inbound  = len(node_0.nodes_inbound)
+        node_1_inbound  = len(node_1.nodes_inbound)
+        node_2_outbound = len(node_2.nodes_outbound)
+
         node_0.stop()
         node_1.stop()
         node_2.stop()
@@ -426,9 +432,9 @@ class TestNode(unittest.TestCase):
         node_2.join()
 
         # Perform the asserts!
-        self.assertEqual(len(node_0.nodes_inbound), 1, "More inbound connections have been accepted bij node_0!")
-        self.assertEqual(len(node_1.nodes_inbound), 2, "Node 1 should have two connections from node_0 and node_2!")
-        self.assertEqual(len(node_2.nodes_outbound), 1, "Node 2 should have one outbound connection with node_1!")
+        self.assertEqual(node_0_inbound, 1, "More inbound connections have been accepted bij node_0!")
+        self.assertEqual(node_1_inbound, 2, "Node 1 should have two connections from node_0 and node_2!")
+        self.assertEqual(node_2_outbound, 1, "Node 2 should have one outbound connection with node_1!")
 
     def test_node_id(self):
         """Testing the ID settings of the node."""

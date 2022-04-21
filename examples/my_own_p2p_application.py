@@ -25,6 +25,12 @@ node_3.start()
 
 time.sleep(1)
 
+debug = False
+node_1.debug = debug
+node_2.debug = debug
+node_3.debug = debug
+
+
 node_1.connect_with_node('127.0.0.1', 8002)
 node_2.connect_with_node('127.0.0.1', 8003)
 node_3.connect_with_node('127.0.0.1', 8001)
