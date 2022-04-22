@@ -5,6 +5,7 @@ import random
 import hashlib
 
 from p2pnetwork.nodeconnection import NodeConnection
+from p2pnetwork.plugin import NodePlugin
 
 """
 Author: Maurice Snoeren <macsnoeren(at)gmail.com>
@@ -81,6 +82,9 @@ class Node(threading.Thread):
 
         # Debugging on or off!
         self.debug = False
+
+        # Hold the registered plugins
+        self.plugins = []
 
     @property
     def all_nodes(self):
@@ -312,12 +316,22 @@ class Node(threading.Thread):
         """This method is invoked when a connection with a outbound node was successfull. The node made
            the connection itself."""
         self.debug_print("outbound_node_connected: " + node.id)
+
+        for plugin in self.plugins:
+            if plugin.outbound_node_connected(node):
+                self.debug_print("NodePlugin:outbound_node_connected: " + plugin.name + " invoked")
+
         if self.callback is not None:
             self.callback("outbound_node_connected", self, node, {})
 
     def inbound_node_connected(self, node):
         """This method is invoked when a node successfully connected with us."""
         self.debug_print("inbound_node_connected: " + node.id)
+
+        for plugin in self.plugins:
+            if plugin.inbound_node_connected(node):
+                self.debug_print("NodePlugin:inbound_node_connected: " + plugin.name + " invoked")
+
         if self.callback is not None:
             self.callback("inbound_node_connected", self, node, {})
 
@@ -339,18 +353,33 @@ class Node(threading.Thread):
         """This method is invoked when a node, that was previously connected with us, is in a disconnected
            state."""
         self.debug_print("inbound_node_disconnected: " + node.id)
+
+        for plugin in self.plugins:
+            if plugin.inbound_node_disconnected(node):
+                self.debug_print("NodePlugin:inbound_node_disconnected: " + plugin.name + " invoked")
+
         if self.callback is not None:
             self.callback("inbound_node_disconnected", self, node, {})
 
     def outbound_node_disconnected(self, node):
         """This method is invoked when a node, that we have connected to, is in a disconnected state."""
         self.debug_print("outbound_node_disconnected: " + node.id)
+
+        for plugin in self.plugins:
+            if plugin.outbound_node_disconnected(node):
+                self.debug_print("NodePlugin:outbound_node_disconnected: " + plugin.name + " invoked")
+
         if self.callback is not None:
             self.callback("outbound_node_disconnected", self, node, {})
 
     def node_message(self, node, data):
         """This method is invoked when a node send us a message."""
         self.debug_print("node_message: " + node.id + ": " + str(data))
+
+        for plugin in self.plugins:
+            if plugin.node_message(node, data):
+                self.debug_print("NodePlugin:node_message: " + plugin.name + " invoked")
+
         if self.callback is not None:
             self.callback("node_message", self, node, data)
 
@@ -358,6 +387,11 @@ class Node(threading.Thread):
         """This method is invoked just before the connection is closed with the outbound node. From the node
            this request is created."""
         self.debug_print("node wants to disconnect with oher outbound node: " + node.id)
+
+        for plugin in self.plugins:
+            if plugin.node_disconnect_with_outbound_node(node):
+                self.debug_print("NodePlugin:node_disconnect_with_outbound_node: " + plugin.name + " invoked")
+
         if self.callback is not None:
             self.callback("node_disconnect_with_outbound_node", self, node, {})
 
@@ -376,6 +410,15 @@ class Node(threading.Thread):
            to this node. The node will forever tries to perform the reconnection."""
         self.debug_print("node_reconnection_error: Reconnecting to node " + host + ":" + str(port) + " (trials: " + str(trials) + ")")
         return True
+
+    def register_plugin(self, plugin:NodePlugin) -> bool:
+        """Registers the plugin to the Node. If successfully added, the plugin it immediatly used by the Node and
+           the functionality is availablt to the node."""
+        if issubclass(plugin.__class__, NodePlugin):
+            self.plugins.append(plugin)
+            print("Node:register_plugin: Adding plugin " + plugin.name + " successfully")
+        else:
+            print("Node:register_plugin: Adding plugin " + plugin.name + " unsuccessfully")
 
     def __str__(self):
         return 'Node: {}:{}'.format(self.host, self.port)
