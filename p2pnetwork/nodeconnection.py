@@ -139,8 +139,7 @@ class NodeConnection(threading.Thread):
                 self.main_node.debug_print(type_error)
 
             except Exception as e:  # Fixed issue #19: When sending is corrupted, close the connection
-                self.main_node.debug_print(
-                    f"nodeconnection send: Error sending data to node: {e}")
+                self.main_node.debug_print(f"nodeconnection send: Error sending data to node: {e}")
                 self.stop()  # Stopping node due to failure
 
         elif isinstance(data, bytes):
@@ -165,8 +164,7 @@ class NodeConnection(threading.Thread):
         Please make sure you join the thread."""
         self.terminate_flag.set()
 
-    @staticmethod
-    def parse_packet(packet) -> Union[str, dict, bytes]:
+    def parse_packet(self, packet) -> Union[str, dict, bytes]:
         """Parse the packet and determines whether it has been send in str, json or byte format. It returns
            the according data."""
         if packet.find(self.COMPR_CHAR) == len(packet)-1: # Check if packet was compressed
@@ -176,6 +174,7 @@ class NodeConnection(threading.Thread):
             packet_decoded = packet.decode('utf-8')
 
             try:
+
                 return json.loads(packet_decoded)
 
             except json.decoder.JSONDecodeError:
