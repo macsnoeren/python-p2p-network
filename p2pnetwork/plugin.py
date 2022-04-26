@@ -1,5 +1,5 @@
-from abc import abstractmethod
-from p2pnetwork.node import Node
+from inspect import isclass
+import p2pnetwork.node
 
 """
 Author: Maurice Snoeren <macsnoeren(at)gmail.com>
@@ -19,21 +19,21 @@ class NodePlugin:
         """Create instance of NodePlugin."""
 
         # The node that the plugin holds, required to call function to the node.
-        self.node[Node] = None
+        self.node = None
 
-        # Fill in the name of the plugin
-        self.name = ""
+    def getNode(self):
+        if self.node != None:
+            return self.node
 
-        # Fill in the desciption of the plugin
-        self.descripion = ""
+        raise Exception("NodePlugin: Not correctly initialized and already used!")
 
-    def set_node_reference(self, node:Node) -> None:
+    def set_node_reference(self, node) -> None:
         """Methods sets the reference to the Node. This can be done once and it will check if
            it has a reference to Node itself."""
-        if self.node == Node:
+        if self.node == None:
             self.node = node
         else:
-            print("NodePlugin: Can only reference to a Node once!")
+            print("NodePlugin: Error: Can only reference to a Node once!")
 
     def outbound_node_connected(self, node) -> bool:
         """The plugin is able to react on outbound nodes that are connected using this method."""

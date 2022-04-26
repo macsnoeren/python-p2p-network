@@ -416,9 +416,10 @@ class Node(threading.Thread):
            the functionality is availablt to the node."""
         if issubclass(plugin.__class__, NodePlugin):
             self.plugins.append(plugin)
-            print("Node:register_plugin: Adding plugin " + plugin.name + " successfully")
+            plugin.set_node_reference(self)
+            print("Node:register_plugin: Adding plugin " + str(plugin.__class__.__name__) + " successfully")
         else:
-            print("Node:register_plugin: Adding plugin " + plugin.name + " unsuccessfully")
+            print("Node:register_plugin: Adding plugin " + str(plugin.__class__.__name__) + " unsuccessfully")
 
     def __str__(self):
         return 'Node: {}:{}'.format(self.host, self.port)
