@@ -103,21 +103,19 @@ class Node(threading.Thread):
         print(f"Total nodes connected with us: {len(self.nodes_inbound)}")
         print(f"Total nodes connected to     : {len(self.nodes_outbound)}")
 
-    def send_to_nodes(self, data: Union[str, dict, bytes], exclude: List[NodeConnection] = []) -> None:
+    def send_to_nodes(self, data: Union[str, dict, bytes], exclude: List[NodeConnection] = [], compression = 'none') -> None:
         """ Send a message to all the nodes that are connected with this node. data is a python variable which is
             converted to JSON that is send over to the other node. exclude list gives all the nodes to which this
             data should not be sent."""
-        # TODO: Check if this is correct. Message count is updated also in send_to_node.
-        self.message_count_send += 1
         nodes = filter(lambda node: node not in exclude, self.all_nodes)
         for n in nodes:
-            self.send_to_node(n, data)
+            self.send_to_node(n, data, compression)
 
-    def send_to_node(self, n: NodeConnection, data: Union[str, dict, bytes]) -> None:
+    def send_to_node(self, n: NodeConnection, data: Union[str, dict, bytes], compression = 'none') -> None:
         """ Send the data to the node n if it exists."""
         self.message_count_send += 1
         if n in self.all_nodes:
-            n.send(data)
+            n.send(data, compression=compression)
         else:
             self.debug_print("Node send_to_node: Could not send the data, node is not found!")
 
@@ -148,8 +146,8 @@ class Node(threading.Thread):
             sock.connect((host, port))
 
             # Basic information exchange (not secure) of the id's of the nodes!
-            sock.send(self.id.encode('utf-8'))  # Send my id to the connected node!
-            connected_node_id = sock.recv(4096).decode('utf-8')  # When a node is connected, it sends its id!
+            sock.send((self.id + ":" + str(self.port)).encode('utf-8')) # Send my id and port to the connected node!
+            connected_node_id = sock.recv(4096).decode('utf-8') # When a node is connected, it sends its id!
 
             # Cannot connect with yourself
             if self.id == connected_node_id or connected_node_id in node_ids:
@@ -241,13 +239,13 @@ class Node(threading.Thread):
                 if self.max_connections == 0 or len(self.nodes_inbound) < self.max_connections:
 
                     # Basic information exchange (not secure) of the id's of the nodes!
-                    connected_node_id = connection.recv(4096).decode('utf-8')  # When a node is connected,
-                    # it sends it id!
-                    connection.send(self.id.encode('utf-8'))  # Send my id to the connected node!
+                    connected_node_port = client_address[1] # backward compatibilty
+                    connected_node_id   = connection.recv(4096).decode('utf-8')
+                    if ":" in connected_node_id:
+                        (connected_node_id, connected_node_port) = connected_node_id.split(':') # When a node is connected, it sends it id!
+                    connection.send(self.id.encode('utf-8')) # Send my id to the connected node!
 
-                    thread_client = self.create_new_connection(
-                        connection, connected_node_id, client_address[0], client_address[1]
-                    )
+                    thread_client = self.create_new_connection(connection, connected_node_id, client_address[0], connected_node_port)
                     thread_client.start()
 
                     self.nodes_inbound.append(thread_client)

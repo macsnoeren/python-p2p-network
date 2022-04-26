@@ -207,13 +207,13 @@ node.debug = True
 
 # Unit testing
 
-Several unit tests have been implemented to make sure all the functionality of the provided classes are working correctly. To run these tests, you can use the following code:
+Several unit tests have been implemented to make sure all the functionality of the provided classes are working correctly. The tests can be executed using Tox. This can be easily installed by ```pip install tox```. To run these tests, you can use the following code:
 
 ````bash
-$ python setup.py test
+$ tox
 ````
 
-# Examples
+# Example
 
 Examples are available in the github repository of this project: https://github.com/macsnoeren/python-p2p-network. All examples can be found in the directory examples.
 

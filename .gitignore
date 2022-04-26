@@ -7,3 +7,6 @@ venv/
 /p2pnetwork*.egg-info
 /build
 /.eggs
+
+# Added tox
+.tox
