@@ -1,39 +1,28 @@
+from typing import Union, Any
 import socket
 import time
 import threading
 import json
 import zlib, bz2, lzma, base64
 
-"""
-Author : Maurice Snoeren <macsnoeren(at)gmail.com>
-Version: 0.3 beta (use at your own risk)
-Date: 7-5-2020
 
-Python package p2pnet for implementing decentralized peer-to-peer network applications
-"""
 class NodeConnection(threading.Thread):
-    """The class NodeConnection is used by the class Node and represent the TCP/IP socket connection with another node. 
+    """The class NodeConnection is used by the class Node and represent the TCP/IP socket connection with another node.
+
        Both inbound (nodes that connect with the server) and outbound (nodes that are connected to) are represented by
-       this class. The class contains the client socket and hold the id information of the connecting node. Communication
-       is done by this class. When a connecting node sends a message, the message is relayed to the main node (that created
-       this NodeConnection in the first place).
+       this class. The class contains the client socket and hold the id information of the connecting node.
+       Communication is done by this class. When a connecting node sends a message, the message is relayed to the
+       main node (that created this NodeConnection in the first place).
        
        Instantiates a new NodeConnection. Do not forget to start the thread. All TCP/IP communication is handled by this 
        connection.
         main_node: The Node class that received a connection.
-        sock: The socket that is assiociated with the client connection.
+        sock: The socket that is associated with the client connection.
         id: The id of the connected node (at the other side of the TCP/IP connection).
         host: The host/ip of the main node.
         port: The port of the server of the main node."""
 
-    def __init__(self, main_node, sock, id, host, port):
-        """Instantiates a new NodeConnection. Do not forget to start the thread. All TCP/IP communication is handled by this connection.
-            main_node: The Node class that received a connection.
-            sock: The socket that is assiociated with the client connection.
-            id: The id of the connected node (at the other side of the TCP/IP connection).
-            host: The host/ip of the main node.
-            port: The port of the server of the main node."""
-
+    def __init__(self, main_node, sock: socket.socket, id: str, host: str, port: int):
         super(NodeConnection, self).__init__()
 
         self.host = host
@@ -43,7 +32,7 @@ class NodeConnection(threading.Thread):
         self.terminate_flag = threading.Event()
 
         # The id of the connected node
-        self.id = str(id) # Make sure the ID is a string
+        self.id = str(id)  # Make sure the ID is a string
 
         # End of transmission character for the network streaming messages.
         self.EOT_CHAR = 0x04.to_bytes(1, 'big')
@@ -57,7 +46,9 @@ class NodeConnection(threading.Thread):
         # Use socket timeout to determine problems with the connection
         self.sock.settimeout(10.0)
 
-        self.main_node.debug_print("NodeConnection: Started with client (" + self.id + ") '" + self.host + ":" + str(self.port) + "'")
+        self.main_node.debug_print(
+            f"NodeConnection.send: Started with client ({self.id}) '{self.host}:{self.port}'"
+        )
 
     def compress(self, data, compression):
         """Compresses the data given the type. It is used to provide compression to lower the network traffic in case of
@@ -129,9 +120,10 @@ class NodeConnection(threading.Thread):
                     if data != None:
                         self.sock.sendall(data + self.COMPR_CHAR + self.EOT_CHAR)
 
-            except Exception as e: # Fixed issue #19: When sending is corrupted, close the connection
-                self.main_node.debug_print("nodeconnection send: Error sending data to node: " + str(e))
-                self.stop() # Stopping node due to failure
+            except Exception as e:  # Fixed issue #19: When sending is corrupted, close the connection
+                self.main_node.debug_print(
+                    f"nodeconnection send: Error sending data to node: {e}")
+                self.stop()  # Stopping node due to failure
 
         elif isinstance(data, dict):
             try:
@@ -146,9 +138,9 @@ class NodeConnection(threading.Thread):
                 self.main_node.debug_print('This dict is invalid')
                 self.main_node.debug_print(type_error)
 
-            except Exception as e: # Fixed issue #19: When sending is corrupted, close the connection
-                self.main_node.debug_print("nodeconnection send: Error sending data to node: " + str(e))
-                self.stop() # Stopping node due to failure
+            except Exception as e:  # Fixed issue #19: When sending is corrupted, close the connection
+                self.main_node.debug_print(f"nodeconnection send: Error sending data to node: {e}")
+                self.stop()  # Stopping node due to failure
 
         elif isinstance(data, bytes):
             try:
@@ -164,14 +156,16 @@ class NodeConnection(threading.Thread):
                 self.stop() # Stopping node due to failure
 
         else:
-            self.main_node.debug_print('datatype used is not valid plese use str, dict (will be send as json) or bytes')
+            self.main_node.debug_print(
+                'datatype used is not valid please use str, dict (will be send as json) or bytes')
 
-    def stop(self):
-        """Terminates the connection and the thread is stopped. Stop the node client. Please make sure you join the thread."""
+    def stop(self) -> None:
+        """Terminates the connection and the thread is stopped.
+        Please make sure you join the thread."""
         self.terminate_flag.set()
 
-    def parse_packet(self, packet):
-        """Parse the packet and determines wheter it has been send in str, json or byte format. It returns
+    def parse_packet(self, packet) -> Union[str, dict, bytes]:
+        """Parse the packet and determines whether it has been send in str, json or byte format. It returns
            the according data."""
         if packet.find(self.COMPR_CHAR) == len(packet)-1: # Check if packet was compressed
             packet = self.decompress(packet[0:-1])
@@ -180,6 +174,7 @@ class NodeConnection(threading.Thread):
             packet_decoded = packet.decode('utf-8')
 
             try:
+
                 return json.loads(packet_decoded)
 
             except json.decoder.JSONDecodeError:
@@ -188,24 +183,23 @@ class NodeConnection(threading.Thread):
         except UnicodeDecodeError:
             return packet
 
-    # Required to implement the Thread. This is the main loop of the node client.
     def run(self):
         """The main loop of the thread to handle the connection with the node. Within the
            main loop the thread waits to receive data from the node. If data is received 
-           the method node_message will be invoked of the main node to be processed."""          
-        buffer = b'' # Hold the stream that comes in!
+           the method node_message will be invoked of the main node to be processed."""
+        buffer = b''  # Hold the stream that comes in!
 
         while not self.terminate_flag.is_set():
             chunk = b''
 
             try:
-                chunk = self.sock.recv(4096) 
+                chunk = self.sock.recv(4096)
 
             except socket.timeout:
                 self.main_node.debug_print("NodeConnection: timeout")
 
             except Exception as e:
-                self.terminate_flag.set() # Exception occurred terminating the connection
+                self.terminate_flag.set()  # Exception occurred terminating the connection
                 self.main_node.debug_print('Unexpected error')
                 self.main_node.debug_print(e)
 
@@ -219,26 +213,32 @@ class NodeConnection(threading.Thread):
                     buffer = buffer[eot_pos + 1:]
 
                     self.main_node.message_count_recv += 1
-                    self.main_node.node_message( self, self.parse_packet(packet) )
+                    self.main_node.node_message(self, self.parse_packet(packet))
 
                     eot_pos = buffer.find(self.EOT_CHAR)
 
             time.sleep(0.01)
 
-        # IDEA: Invoke (event) a method in main_node so the user is able to send a bye message to the node before it is closed?
+        # IDEA: Invoke (event) a method in main_node so the user
+        # is able to send a bye message to the node before it is closed?
         self.sock.settimeout(None)
         self.sock.close()
-        self.main_node.node_disconnected( self ) # Fixed issue #19: Send to main_node when a node is disconnected. We do not know whether it is inbounc or outbound.
+        # Fixed issue #19: Send to main_node when a node is disconnected.
+        # We do not know whether it is inbound or outbound.
+        self.main_node.node_disconnected(self)
         self.main_node.debug_print("NodeConnection: Stopped")
 
-    def set_info(self, key, value):
+    def set_info(self, key: str, value: Any) -> Any:
         self.info[key] = value
 
-    def get_info(self, key):
+    def get_info(self, key: str) -> Any:
         return self.info[key]
 
-    def __str__(self):
-        return 'NodeConnection: {}:{} <-> {}:{} ({})'.format(self.main_node.host, self.main_node.port, self.host, self.port, self.id)
+    def __str__(self) -> str:
+        return 'NodeConnection: {}:{} <-> {}:{} ({})'.format(
+            self.main_node.host, self.main_node.port, self.host, self.port,
+            self.id)
 
-    def __repr__(self):
-        return '<NodeConnection: Node {}:{} <-> Connection {}:{}>'.format(self.main_node.host, self.main_node.port, self.host, self.port)
+    def __repr__(self) -> str:
+        return '<NodeConnection: Node {}:{} <-> Connection {}:{}>'.format(
+            self.main_node.host, self.main_node.port, self.host, self.port)
