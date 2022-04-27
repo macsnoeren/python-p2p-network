@@ -95,7 +95,7 @@ class Node(threading.Thread):
         self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.sock.bind((self.host, self.port))
         self.sock.settimeout(10.0)
-        self.sock.listen(1)
+        self.sock.listen(5) # Queue up to 5 simultanous connections
 
     def print_connections(self) -> None:
         """Prints the connection overview of the node. How many inbound and outbound connections have been made."""
