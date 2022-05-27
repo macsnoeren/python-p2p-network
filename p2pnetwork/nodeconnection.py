@@ -6,7 +6,6 @@ import threading
 import json
 import zlib, bz2, lzma, base64
 
-
 class NodeConnection(threading.Thread):
     """The class NodeConnection is used by the class Node and represent the TCP/IP socket connection with another node.
 
@@ -34,6 +33,9 @@ class NodeConnection(threading.Thread):
 
         # The id of the connected node
         self.id = str(id)  # Make sure the ID is a string
+
+        # Start byte indicates start of a frame!
+        self.START_BYTE = 0x5A.to_bytes(1, 'big')
 
         # End of transmission character for the network streaming messages.
         self.EOT_CHAR = 0x04.to_bytes(1, 'big')
@@ -144,7 +146,8 @@ class NodeConnection(threading.Thread):
                 'datatype used is not valid please use str, dict (will be send as json) or bytes')
 
     def send_packet(self, data, compression):
-        """Sends the packet based on the length and encoding type.
+        """Sends the packet based on the length and encoding type. The packet is designed as follows:
+           |START_BYTE(1)|LENGTH(8)|DATA(LENGTH)|END_BYTE(1)|
         """
         if compression == 'none':
             # packing the package length
