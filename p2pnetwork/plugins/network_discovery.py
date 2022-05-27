@@ -2,16 +2,8 @@ import time
 
 from p2pnetwork.plugin import NodePlugin
 
-"""
-Author: Maurice Snoeren <macsnoeren(at)gmail.com>
-Version: 0.1 beta (use at your own risk)
-Date: 22-4-2022
-
-Python package p2pnet for implementing decentralized peer-to-peer network applications
-"""
-
 class PluginNetworkDiscovery(NodePlugin):
-    """This plugin implements the network functionality of the p2p network."""
+    """This plugin implements the discovery network functionality of the p2p network."""
        
     def __init__(self):
         """Create instance of PluginNetworkDiscovery."""
@@ -21,13 +13,13 @@ class PluginNetworkDiscovery(NodePlugin):
         # together with the node that send this message
         self.discover_ids = {}
 
-    def node_message(self, node, data) -> bool:
-        if data["type"] == "discover":
+    def node_received_message(self, node, data) -> bool:
+        if "type" in data and data["type"] == "discover":
             self.discover_received(node, data)
             return True
 
         # Handle the reception of the discover_answer message
-        if data["type"] == "discover_answer":
+        if "type" in data and data["type"] == "discover_answer":
             self.discover_answer_received(node, data)
             return True
 
@@ -38,7 +30,7 @@ class PluginNetworkDiscovery(NodePlugin):
     # which means that it will be infinitely be relayed. Note that nodes
     # will not relay the discovery message when they already received it.
     def discover(self, depth=-1):
-        id = self.id + str(int(time.time())) # node_id + timestamp
+        id = self.getNode().id + str(int(time.time())) # node_id + timestamp
         self.getNode().send_to_nodes({
             "type": "discover",
             "id": id,
@@ -75,14 +67,14 @@ class PluginNetworkDiscovery(NodePlugin):
         outbound_nodes = []
         inbound_nodes = []
 
-        for node in self.nodes_outbound:
+        for node in self.getNode().nodes_outbound:
             outbound_nodes.append({
                 "id": node.id,
                 "host": node.host,
                 "port": node.port
             })
 
-        for node in self.nodes_inbound:
+        for node in self.getNode().nodes_inbound:
             inbound_nodes.append({
                 "id": node.id,
                 "host": node.host,
@@ -92,7 +84,7 @@ class PluginNetworkDiscovery(NodePlugin):
         self.getNode().send_to_nodes({
             "type": "discover_answer",
             "id": id,
-            "node_id": self.id,
+            "node_id": self.getNode().id,
             "outbound_nodes": outbound_nodes,
             "inbound_nodes": inbound_nodes
         })        

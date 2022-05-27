@@ -1,4 +1,3 @@
-from inspect import isclass
 import p2pnetwork.node
 
 """
@@ -55,7 +54,12 @@ class NodePlugin:
         """The plugin is able to react on disconnection with outbound node."""
         return False
 
-    def node_message(self, node, data) -> bool:
+    def node_send_data(self, data, encoding_type='utf-8'):
+        """When the node is sending data, this method is called. The plugin is able to add a protocol
+           or to add compression."""
+        return (False, data)
+
+    def node_received_message(self, node, data) -> bool:
         """This method is called when the node received data from another node. The plugin is able to check
            whether this method is required to be processed. When the plugin decides that the data is going
            to be processed, it returns True otherwise False."""

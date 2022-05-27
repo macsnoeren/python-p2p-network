@@ -1,13 +1,15 @@
 """
 Python package p2pnet for implementing decentralized peer-to-peer network applications
 """
-from p2pnetwork.nodeconnection import NodeConnection
-from typing import Union, List, Callable
 import socket
 import time
 import threading
 import random
 import hashlib
+from typing import Union, List, Callable
+
+from p2pnetwork.nodeconnection import NodeConnection
+from p2pnetwork.plugin import NodePlugin
 
 class Node(threading.Thread):
     """Implements a node that is able to connect to other nodes and is able to accept connections from other nodes.
@@ -105,19 +107,19 @@ class Node(threading.Thread):
         print(f"Total nodes connected with us: {len(self.nodes_inbound)}")
         print(f"Total nodes connected to     : {len(self.nodes_outbound)}")
 
-    def send_to_nodes(self, data: Union[str, dict, bytes], exclude: List[NodeConnection] = [], compression = 'none') -> None:
+    def send_to_nodes(self, data: Union[str, dict, bytes], exclude: List[NodeConnection] = []) -> None:
         """ Send a message to all the nodes that are connected with this node. data is a python variable which is
             converted to JSON that is send over to the other node. exclude list gives all the nodes to which this
             data should not be sent."""
         nodes = filter(lambda node: node not in exclude, self.all_nodes)
         for n in nodes:
-            self.send_to_node(n, data, compression)
+            self.send_to_node(n, data)
 
-    def send_to_node(self, n: NodeConnection, data: Union[str, dict, bytes], compression = 'none') -> None:
+    def send_to_node(self, n: NodeConnection, data: Union[str, dict, bytes]) -> None:
         """ Send the data to the node n if it exists."""
         self.message_count_send += 1
         if n in self.all_nodes:
-            n.send(data, compression=compression)
+            n.send(data)
         else:
             self.debug_print("Node send_to_node: Could not send the data, node is not found!")
 
@@ -136,7 +138,7 @@ class Node(threading.Thread):
 
         # Check if node is already connected with this node!
         for node in self.all_nodes:
-            if node.host == host and node.port == port:
+            if node.host == host and str(node.port) == str(port):
                 print(f"connect_with_node: Already connected with this node ({node.id}).")
                 return True
 
@@ -153,6 +155,7 @@ class Node(threading.Thread):
 
             # Cannot connect with yourself
             if self.id == connected_node_id or connected_node_id in node_ids:
+                print(f"connect_with_node: Already connected with this node ({node.id}).")
                 sock.send("CLOSING: Already having a connection together".encode('utf-8'))
                 sock.close()
                 return True
@@ -337,7 +340,7 @@ class Node(threading.Thread):
 
         for plugin in self.plugins:
             if plugin.inbound_node_disconnected(node):
-                self.debug_print("NodePlugin:inbound_node_disconnected: " + plugin.name + " invoked")
+                self.debug_print("NodePlugin:inbound_node_disconnected: " + str(plugin) + " invoked")
 
         if self.callback is not None:
             self.callback("inbound_node_disconnected", self, node, {})
@@ -348,7 +351,7 @@ class Node(threading.Thread):
 
         for plugin in self.plugins:
             if plugin.outbound_node_disconnected(node):
-                self.debug_print("NodePlugin:outbound_node_disconnected: " + plugin.name + " invoked")
+                self.debug_print("NodePlugin:outbound_node_disconnected: " + str(plugin) + " invoked")
 
         if self.callback is not None:
             self.callback("outbound_node_disconnected", self, node, {})
@@ -358,8 +361,8 @@ class Node(threading.Thread):
         self.debug_print(f"node_message: {node.id}: {data}")
 
         for plugin in self.plugins:
-            if plugin.node_message(node, data):
-                self.debug_print("NodePlugin:node_message: " + plugin.name + " invoked")
+            if plugin.node_received_message(node, data):
+                self.debug_print("NodePlugin:node_message: " + str(plugin) + " invoked")
 
         if self.callback is not None:
             self.callback("node_message", self, node, data)
@@ -371,7 +374,7 @@ class Node(threading.Thread):
 
         for plugin in self.plugins:
             if plugin.node_disconnect_with_outbound_node(node):
-                self.debug_print("NodePlugin:node_disconnect_with_outbound_node: " + plugin.name + " invoked")
+                self.debug_print("NodePlugin:node_disconnect_with_outbound_node: " + str(plugin) + " invoked")
 
         if self.callback is not None:
             self.callback("node_disconnect_with_outbound_node", self, node, {})
@@ -383,7 +386,7 @@ class Node(threading.Thread):
         if self.callback is not None:
             self.callback("node_request_to_stop", self, {}, {})
 
-    def node_reconnection_error(self, host, port, trials):
+    def node_reconnection_error(self, host, port, trials) -> bool:
         """This method is invoked when a reconnection error occurred. The node connection is disconnected and the
            flag for reconnection is set to True for this node. This function can be overridden to implement your
            specific logic to take action when a lot of trials have been done. If the method returns True, the
@@ -393,6 +396,14 @@ class Node(threading.Thread):
             f"node_reconnection_error: Reconnecting to node {host}:{port} (trials: {trials})"
         )
         return True
+
+    def _node_send(self, data, encoding_type='utf-8'):
+        """When the node sends data, this function calls the plugins to add possible sending the data functionality."""
+        for plugin in self.plugins:
+            (result, data) = plugin.node_send_data(data, encoding_type)
+            if result:
+                self.debug_print(f"NodePlugin:node_send: {plugin} invoked")
+        return data
 
     def register_plugin(self, plugin:NodePlugin) -> bool:
         """Registers the plugin to the Node. If successfully added, the plugin it immediatly used by the Node and
