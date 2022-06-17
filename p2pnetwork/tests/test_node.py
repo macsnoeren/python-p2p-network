@@ -450,7 +450,7 @@ class TestNode(unittest.TestCase):
         node_2.join()
 
         # Perform the asserts!
-        self.assertEqual(node_0_inbound, 1, "More inbound connections have been accepted bij node_0!")
+        self.assertEqual(node_0_inbound, 1, "More inbound connections have been accepted by node_0!")
         self.assertEqual(node_1_inbound, 2, "Node 1 should have two connections from node_0 and node_2!")
         self.assertEqual(node_2_outbound, 1, "Node 2 should have one outbound connection with node_1!")
 
@@ -481,7 +481,6 @@ class TestNode(unittest.TestCase):
         self.assertEqual(node_0.id, "thisisanidtest", "Node 0 shoud have id \"thisisanidtest\"")
         self.assertNotEqual(node_1.id, "thisisanidtest", "Node 1 should have a different id than node 0")
         self.assertNotEqual(node_1.id, None, "The ID pf node 1 should not be equal to None")
-
 
 if __name__ == '__main__':
     unittest.main()

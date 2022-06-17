@@ -141,3 +141,90 @@ class TestNode(unittest.TestCase):
         for i in range(0, 10, 2):
             self.assertEqual(str(messages[3 + i]), "<class 'dict'>")
             self.assertEqual(messages[4 + i], 5000)
+
+    def test_node_connection_small_message(self):
+        """Testing whether NodeConnections handle sending small messages well enough."""
+        global messages
+        messages = []
+
+        class MyTestNode(Node):
+            def __init__(self, host, port):
+                super(MyTestNode, self).__init__(host, port, None)
+
+            def node_message(self, node, data):
+                global messages
+                messages.append(data)
+
+        node1 = MyTestNode("127.0.0.1", 10001)
+        node2 = MyTestNode("127.0.0.1", 10002)
+        node3 = MyTestNode("127.0.0.1", 10003)
+
+        node1.start()
+        node2.start()
+        node3.start()
+
+        node1.connect_with_node('127.0.0.1', 10002)
+        time.sleep(2)
+
+        node3.connect_with_node('127.0.0.1', 10001)
+        time.sleep(2)
+
+        # Create small messages for sending
+        data = "a"
+
+        node1.send_to_nodes(data)
+        node1.send_to_nodes(data)
+        node1.send_to_nodes(data)
+        node1.send_to_nodes(data)
+        node1.send_to_nodes(data)
+        time.sleep(10)
+
+        node1.stop()
+        node2.stop()
+        node3.stop()
+        node1.join()
+        node2.join()
+        node3.join()
+
+        self.assertTrue(len(messages) > 0, "There should have been sent some messages around!")
+        self.assertEqual(len(messages), 5, "There should have been sent 8 message around!")
+
+        for message in messages:
+            self.assertEqual(message, "a")
+
+    def test_node_data_too_long(self):
+        global messages
+        messages = []
+
+        class MyTestNode(Node):
+            def __init__(self, host, port):
+                super(MyTestNode, self).__init__(host, port, None)
+                global messages
+                messages.append("mytestnode started")
+
+            def node_message(self, node, data):
+                global messages
+                messages.append(type(data))
+                messages.append(len(data))
+
+        node1 = MyTestNode("127.0.0.1", 10001)
+        node2 = MyTestNode("127.0.0.1", 10002)
+
+        node1.start()
+        node2.start()
+
+        node1.connect_with_node('127.0.0.1', 10002)
+        time.sleep(2)
+
+        # Create large message; large than max package length 2^64!
+        # data = "a" * (pow(2, 64) - 1)
+        data = "a"
+
+        # Send multiple messages after each other (5 * 5000 bytes)
+        node1.send_to_nodes(data)
+        time.sleep(1)
+
+        node1.stop()
+        node2.stop()
+        node1.join()
+        node2.join()
