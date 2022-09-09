@@ -125,7 +125,7 @@ class Node(threading.Thread):
         When the connection is made, an event is triggered outbound_node_connected. When the connection is made with
         the node, it exchanges the id's of the node. First we send our id and then we receive the id of the node we
         are connected to. When the connection is made the method outbound_node_connected is invoked. If reconnect is
-        True, the node will try to reconnect to the code whenever the node connection was closed. The method returns
+        True, the node will try to reconnect to the node whenever the node connection was closed. The method returns
         True when the node is connected with the specific host."""
 
         if host == self.host and port == self.port:
