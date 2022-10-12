@@ -1,4 +1,5 @@
 from typing import Union, Any
+from struct import unpack, pack
 import socket
 import time
 import threading
@@ -34,8 +35,14 @@ class NodeConnection(threading.Thread):
         # The id of the connected node
         self.id = str(id)  # Make sure the ID is a string
 
+        # Start of transmission character for network streaming messages
+        self.START_BYTE = 0x01.to_bytes(1, 'big')
+
+        # Length of the packet length in bytes.
+        self.PACKET_LENGTH_BYTES = 8
+
         # End of transmission character for the network streaming messages.
-        self.EOT_CHAR = 0x04.to_bytes(1, 'big')
+        self.END_BYTE = 0x04.to_bytes(1, 'big')
 
         # Indication that the message has been compressed
         self.COMPR_CHAR = 0x02.to_bytes(1, 'big')
@@ -61,13 +68,13 @@ class NodeConnection(threading.Thread):
 
         try:
             if compression == 'zlib':
-                compressed = base64.b64encode( zlib.compress(data, 6) + b'zlib' )
-            
+                compressed = base64.b64encode(zlib.compress(data, 6) + b'zlib')
+
             elif compression == 'bzip2':
-                compressed = base64.b64encode( bz2.compress(data) + b'bzip2' )
-            
+                compressed = base64.b64encode(bz2.compress(data) + b'bzip2')
+
             elif compression == 'lzma':
-                compressed = base64.b64encode( lzma.compress(data) + b'lzma' )
+                compressed = base64.b64encode(lzma.compress(data) + b'lzma')
 
             else:
                 self.main_node.debug_print(self.id + ":compress:Unknown compression")
@@ -77,7 +84,8 @@ class NodeConnection(threading.Thread):
             self.main_node.debug_print("compress: exception: " + str(e))
 
         self.main_node.debug_print(self.id + ":compress:b64encode:" + str(compressed))
-        self.main_node.debug_print(self.id + ":compress:compression:" + str(int(10000*len(compressed)/len(data))/100) + "%")
+        self.main_node.debug_print(
+            self.id + ":compress:compression:" + str(int(10000 * len(compressed) / len(data)) / 100) + "%")
 
         return compressed
 
@@ -90,13 +98,13 @@ class NodeConnection(threading.Thread):
 
         try:
             if compressed[-4:] == b'zlib':
-                compressed = zlib.decompress(compressed[0:len(compressed)-4])
-            
+                compressed = zlib.decompress(compressed[0:len(compressed) - 4])
+
             elif compressed[-5:] == b'bzip2':
-                compressed = bz2.decompress(compressed[0:len(compressed)-5])
-            
+                compressed = bz2.decompress(compressed[0:len(compressed) - 5])
+
             elif compressed[-4:] == b'lzma':
-                compressed = lzma.decompress(compressed[0:len(compressed)-4])
+                compressed = lzma.decompress(compressed[0:len(compressed) - 4])
         except Exception as e:
             print("Exception: " + str(e))
 
@@ -113,13 +121,7 @@ class NodeConnection(threading.Thread):
            """
         if isinstance(data, str):
             try:
-                if compression == 'none':
-                    self.sock.sendall( data.encode(encoding_type) + self.EOT_CHAR )
-                else:
-                    data = self.compress(data.encode(encoding_type), compression)
-                    if data != None:
-                        self.sock.sendall(data + self.COMPR_CHAR + self.EOT_CHAR)
-
+                self.send_packet(data.encode(encoding_type), compression)
             except Exception as e:  # Fixed issue #19: When sending is corrupted, close the connection
                 self.main_node.debug_print(
                     f"nodeconnection send: Error sending data to node: {e}")
@@ -127,13 +129,7 @@ class NodeConnection(threading.Thread):
 
         elif isinstance(data, dict):
             try:
-                if compression == 'none':
-                    self.sock.sendall(json.dumps(data).encode(encoding_type) + self.EOT_CHAR)
-                else:
-                    data = self.compress(json.dumps(data).encode(encoding_type), compression)
-                    if data != None:
-                        self.sock.sendall(data + self.COMPR_CHAR + self.EOT_CHAR)
-
+                self.send_packet(json.dumps(data).encode(encoding_type), compression)
             except TypeError as type_error:
                 self.main_node.debug_print('This dict is invalid')
                 self.main_node.debug_print(type_error)
@@ -144,20 +140,46 @@ class NodeConnection(threading.Thread):
 
         elif isinstance(data, bytes):
             try:
-                if compression == 'none':
-                    self.sock.sendall(data + self.EOT_CHAR)
-                else:
-                    data = self.compress(data, compression)
-                    if data != None:
-                        self.sock.sendall(data + self.COMPR_CHAR + self.EOT_CHAR)
-
-            except Exception as e: # Fixed issue #19: When sending is corrupted, close the connection
+                self.send_packet(data, compression)
+            except Exception as e:  # Fixed issue #19: When sending is corrupted, close the connection
                 self.main_node.debug_print("nodeconnection send: Error sending data to node: " + str(e))
-                self.stop() # Stopping node due to failure
+                self.stop()  # Stopping node due to failure
 
         else:
             self.main_node.debug_print(
                 'datatype used is not valid please use str, dict (will be send as json) or bytes')
+
+    def send_packet(self, data, compression):
+        """Sends the the packet based on the length and encoding type. The packet that will be sent
+        consists the following:
+        - Start byte
+        - Length of packet
+        - Data
+        - End byte
+        """
+        if len(data) > pow(2, 64):
+            # for now an error is raised
+            raise BufferError("Length of the data exceeds the possible length that can be send (8 bytes (2^64))")
+            return
+
+        if compression == 'none':
+            # packing the package length
+            # > indicates the byte order, Q defines the C type
+
+            packet_length = pack('>Q', len(data))
+            self.sock.sendall(self.START_BYTE)
+            self.sock.sendall(packet_length)
+            self.sock.sendall(data)
+            self.sock.sendall(self.END_BYTE)
+        else:
+            compressed_packet = self.compress(data, compression)
+            if compressed_packet is not None:
+                packet = compressed_packet + self.COMPR_CHAR
+                packet_length = pack('>Q', len(packet))
+                self.sock.sendall(self.START_BYTE)
+                self.sock.sendall(packet_length)
+                self.sock.sendall(packet)
+                self.sock.sendall(self.END_BYTE)
 
     def stop(self) -> None:
         """Terminates the connection and the thread is stopped.
@@ -167,7 +189,7 @@ class NodeConnection(threading.Thread):
     def parse_packet(self, packet) -> Union[str, dict, bytes]:
         """Parse the packet and determines whether it has been send in str, json or byte format. It returns
            the according data."""
-        if packet.find(self.COMPR_CHAR) == len(packet)-1: # Check if packet was compressed
+        if packet.find(self.COMPR_CHAR) == len(packet) - 1:  # Check if packet was compressed
             packet = self.decompress(packet[0:-1])
 
         try:
@@ -187,8 +209,7 @@ class NodeConnection(threading.Thread):
         """The main loop of the thread to handle the connection with the node. Within the
            main loop the thread waits to receive data from the node. If data is received 
            the method node_message will be invoked of the main node to be processed."""
-        buffer = b''  # Hold the stream that comes in!
-
+        buffer = b''
         while not self.terminate_flag.is_set():
             chunk = b''
 
@@ -197,27 +218,35 @@ class NodeConnection(threading.Thread):
 
             except socket.timeout:
                 self.main_node.debug_print("NodeConnection: timeout")
-
             except Exception as e:
                 self.terminate_flag.set()  # Exception occurred terminating the connection
                 self.main_node.debug_print('Unexpected error')
                 self.main_node.debug_print(e)
 
-            # BUG: possible buffer overflow when no EOT_CHAR is found => Fix by max buffer count or so?
             if chunk != b'':
                 buffer += chunk
-                eot_pos = buffer.find(self.EOT_CHAR)
 
-                while eot_pos > 0:
-                    packet = buffer[:eot_pos]
-                    buffer = buffer[eot_pos + 1:]
+                start_pos = buffer.find(self.START_BYTE)
+                end_pos = buffer.find(self.END_BYTE)
 
-                    self.main_node.message_count_recv += 1
-                    self.main_node.node_message(self, self.parse_packet(packet))
+                # if start or end position is not found, the find method returns -1, loop shall be continued. Only if full packets are received the dta shall be extracted.
+                if start_pos == -1 or end_pos == -1:
+                    time.sleep(0.01)
+                    continue
 
-                    eot_pos = buffer.find(self.EOT_CHAR)
+                packet_length = buffer[start_pos + 1:start_pos + self.PACKET_LENGTH_BYTES + 1]
+                (unpacked_length,) = unpack('>Q', packet_length)
 
-            time.sleep(0.01)
+                if start_pos + self.PACKET_LENGTH_BYTES + unpacked_length + 1 != end_pos:
+                    time.sleep(0.01)
+                    raise Exception("Error: Incorrect frame construction")
+
+                packet = buffer[start_pos + self.PACKET_LENGTH_BYTES + 1:end_pos]
+                buffer = buffer[end_pos + 1:]
+
+                self.main_node.message_count_recv += 1
+                self.main_node.node_message(self, self.parse_packet(packet))
+                time.sleep(0.01)
 
         # IDEA: Invoke (event) a method in main_node so the user
         # is able to send a bye message to the node before it is closed?
