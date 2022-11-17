@@ -24,7 +24,7 @@ class Node(threading.Thread):
     provide a callback method. It is preferred to implement a new node by extending this Node class. 
       host: The host name or ip address that is used to bind the TCP/IP server to.
       port: The port number that is used to bind the TCP/IP server to.
-      callback: (optional) The callback that is invokes when events happen inside the network
+      callback: (optional) The callback that is invoked when events happen inside the network
                def node_callback(event, main_node, connected_node, data):
                  event: The event string that has happened.
                  main_node: The main node that is running all the connections with the other nodes.
