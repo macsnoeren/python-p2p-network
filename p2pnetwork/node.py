@@ -37,7 +37,7 @@ class Node(threading.Thread):
             host: The host name or ip address that is used to bind the TCP/IP server to.
             port: The port number that is used to bind the TCP/IP server to.
             id: (optional) This id will be associated with the node. When not given a unique ID will be created.
-            callback: (optional) The callback that is invokes when events happen inside the network.
+            callback: (optional) The callback that is invoked when events happen inside the network.
             max_connections: (optional) limiting the maximum nodes that are able to connect to this node."""
         super(Node, self).__init__()
 
