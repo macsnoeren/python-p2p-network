@@ -52,10 +52,10 @@ class Node(threading.Thread):
         self.callback = callback
 
         # Nodes that have established a connection with this node
-        self.nodes_inbound = []  # Nodes that are connect with us N->(US)
+        self.nodes_inbound = set()  # Nodes that are connect with us N->(US)
 
         # Nodes that this nodes is connected to
-        self.nodes_outbound = []  # Nodes that we are connected to (US)->N
+        self.nodes_outbound = set()  # Nodes that we are connected to (US)->N
 
         # A list of nodes that should be reconnected to whenever the connection was lost
         self.reconnect_to_nodes = []
@@ -85,7 +85,7 @@ class Node(threading.Thread):
     @property
     def all_nodes(self):
         """Return a list of all the nodes, inbound and outbound, that are connected with this node."""
-        return self.nodes_inbound + self.nodes_outbound
+        return self.nodes_inbound | self.nodes_outbound
 
     def debug_print(self, message):
         """When the debug flag is set to True, all debug messages are printed in the console."""
@@ -186,7 +186,7 @@ class Node(threading.Thread):
             thread_client = self.create_new_connection(sock, connected_node_id, host, port)
             thread_client.start()
 
-            self.nodes_outbound.append(thread_client)
+            self.nodes_outbound.add(thread_client)
             self.outbound_node_connected(thread_client)
 
             # If reconnection to this host is required, it will be added to the list!
@@ -272,7 +272,7 @@ class Node(threading.Thread):
                     thread_client = self.create_new_connection(connection, connected_node_id, client_address[0], connected_node_port)
                     thread_client.start()
 
-                    self.nodes_inbound.append(thread_client)
+                    self.nodes_inbound.add(thread_client)
                     self.inbound_node_connected(thread_client)
 
                 else:
@@ -328,11 +328,11 @@ class Node(threading.Thread):
         self.debug_print("node_disconnected: " + node.id)
 
         if node in self.nodes_inbound:
-            del self.nodes_inbound[self.nodes_inbound.index(node)]
+            self.nodes_inbound.remove(node)
             self.inbound_node_disconnected(node)
 
         if node in self.nodes_outbound:
-            del self.nodes_outbound[self.nodes_outbound.index(node)]
+            self.nodes_outbound.remove(node)
             self.outbound_node_disconnected(node)
 
     def inbound_node_disconnected(self, node):
