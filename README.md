@@ -63,7 +63,10 @@ class MyOwnPeer2PeerNode (Node):
         
     def node_disconnect_with_outbound_node(self, connected_node):
         print("node wants to disconnect with oher outbound node: " + connected_node.id)
-        
+    
+    def node_disconnect_with_inbound_node(self, connected_node):
+        print("node wants to disconnect with other inbound node: " + connected_node.id)
+    
     def node_request_to_stop(self):
         print("node is requested to stop!")
 
@@ -192,6 +195,9 @@ A node - ```` connected_node ```` - sends a message. At this moment the basic fu
 
 ### node_disconnect_with_outbound_node
 The application actively wants to disconnect the outbound node, a node with which we had made a connection in the past. You could send some last message to the node, that you are planning to disconnect, for example.
+
+### node_disconnect_with_inbound_node
+The application actively wants to disconnect the inbound node, a node that had made a connection with us in the past. You could send some last message to the node, that you are planning to disconnect, for example.
 
 ### node_request_to_stop
 The main node, also the application, is stopping itself. Note that the variable connected_node is empty, while there is no connected node involved.
