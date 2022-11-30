@@ -75,7 +75,7 @@ class Node(threading.Thread):
         self.message_count_send = 0
         self.message_count_recv = 0
         self.message_count_rerr = 0
-        
+
         # Connection limit of inbound nodes (nodes that connect to us)
         self.max_connections = max_connections
 
@@ -261,13 +261,22 @@ class Node(threading.Thread):
                 self.debug_print("Total inbound connections:" + str(len(self.nodes_inbound)))
                 # When the maximum connections is reached, it disconnects the connection 
                 if self.max_connections == 0 or len(self.nodes_inbound) < self.max_connections:
-                    
+
                     # Basic information exchange (not secure) of the id's of the nodes!
                     connected_node_port = client_address[1] # backward compatibilty
                     connected_node_id   = connection.recv(4096).decode('utf-8')
                     if ":" in connected_node_id:
                         (connected_node_id, connected_node_port) = connected_node_id.split(':') # When a node is connected, it sends it id!
                     connection.send(self.id.encode('utf-8')) # Send my id to the connected node!
+                    if connected_node_id == self.id:
+                        print("receiving attempt of connection from yourself ??")
+                        connection.send("CLOSING: Already having a connection together".encode('utf-8'))
+                        connection.close()
+                    for node in self.all_nodes:
+                        if node.id == connected_node_id:
+                            print("receiving attempt of connection from node (" + node.id + ") already connected with us.")
+                            connection.send("CLOSING: Already having a connection together".encode('utf-8'))
+                            connection.close()
 
                     thread_client = self.create_new_connection(connection, connected_node_id, client_address[0], connected_node_port)
                     thread_client.start()
@@ -278,7 +287,7 @@ class Node(threading.Thread):
                 else:
                     self.debug_print("New connection is closed. You have reached the maximum connection limit!")
                     connection.close()
-            
+
             except socket.timeout:
                 self.debug_print('Node: Connection timeout!')
 
@@ -304,7 +313,7 @@ class Node(threading.Thread):
         for t in self.nodes_outbound:
             t.join()
 
-        self.sock.settimeout(None)   
+        self.sock.settimeout(None)
         self.sock.close()
         print("Node stopped")
 
