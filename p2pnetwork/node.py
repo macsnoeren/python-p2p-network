@@ -266,7 +266,8 @@ class Node(threading.Thread):
                     connected_node_port = client_address[1] # backward compatibilty
                     connected_node_id   = connection.recv(4096).decode('utf-8')
                     if ":" in connected_node_id:
-                        (connected_node_id, connected_node_port) = connected_node_id.split(':') # When a node is connected, it sends it id!
+                        # When a node is connected, it sends its id!
+                        (connected_node_id, connected_node_port) = connected_node_id.split(':')
                     connection.send(self.id.encode('utf-8')) # Send my id to the connected node!
 
                     thread_client = self.create_new_connection(connection, connected_node_id, client_address[0], connected_node_port)
