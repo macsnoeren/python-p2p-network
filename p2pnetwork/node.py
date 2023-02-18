@@ -309,8 +309,8 @@ class Node(threading.Thread):
         print("Node stopped")
 
     def outbound_node_connected(self, node):
-        """This method is invoked when a connection with a outbound node was successfull. The node made
-           the connection itself."""
+        """This method is invoked when a connection with a outbound node was 
+           successfull.  The node `self` made the connection."""
         self.debug_print("outbound_node_connected: " + node.id)
         if self.callback is not None:
             self.callback("outbound_node_connected", self, node, {})
