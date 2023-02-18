@@ -31,7 +31,7 @@ class Node(threading.Thread):
                  connected_node: Which connected node caused the event.
                  data: The data that is send by the connected node."""
 
-    def __init__(self, host, port, id=None, callback=None, max_connections=0):
+    def __init__(self, host, port, id=None, callback=None, max_connections=1):
         """Create instance of a Node. If you want to implement the Node functionality with a callback, you should 
            provide a callback method. It is preferred to implement a new node by extending this Node class. 
             host: The host name or ip address that is used to bind the TCP/IP server to.
@@ -260,7 +260,7 @@ class Node(threading.Thread):
 
                 self.debug_print("Total inbound connections:" + str(len(self.nodes_inbound)))
                 # When the maximum connections is reached, it disconnects the connection 
-                if self.max_connections == 0 or len(self.nodes_inbound) < self.max_connections:
+                if len(self.nodes_inbound) < self.max_connections:
                     
                     # Basic information exchange (not secure) of the id's of the nodes!
                     connected_node_port = client_address[1] # backward compatibilty
