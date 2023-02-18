@@ -373,7 +373,7 @@ class Node(threading.Thread):
            flag for reconnection is set to True for this node. This function can be overidden to implement your
            specific logic to take action when a lot of trials have been done. If the method returns True, the
            node will try to perform the reconnection. If the method returns False, the node will stop reconnecting
-           to this node. The node will forever tries to perform the reconnection."""
+           to this node. The node will forever try to perform the reconnection."""
         self.debug_print("node_reconnection_error: Reconnecting to node " + host + ":" + str(port) + " (trials: " + str(trials) + ")")
         return True
 
