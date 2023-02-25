@@ -1,3 +1,8 @@
+![Badges](https://img.shields.io/github/repo-size/macsnoeren/python-p2p-network)
+![Badges](https://img.shields.io/github/last-commit/macsnoeren/python-p2p-network) 
+![Badges](https://img.shields.io/github/stars/macsnoeren/python-p2p-network)
+![Badges](https://img.shields.io/github/v/release/macsnoeren/python-p2p-network) 
+
 # Python implementation of a peer-to-peer decentralized network
 This project provides a basic and simple peer-to-peer decentralized network classes (framework) to build your own network. Basic functionality of the nodes and the connection to and from these  nodes has been implemented. Application specific functionality is up to you to implement yourself. The intention of the module is to provide a good basis, without specific implementation, so everyone is really free to implement like they would like to do.
 
