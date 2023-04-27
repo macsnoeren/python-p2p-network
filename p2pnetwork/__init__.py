@@ -10,4 +10,7 @@ __author__ = 'Maurice Snoeren'
 __license__ = "GNU 3.0"
 __main__ = "p2pnetwork"
 
-__all__ = ["node", "nodeconnection"]
+__all__ = ["node", "Node", "nodeconnection", "NodeConnection"]
+
+from .node import Node
+from .nodeconection import NodeConnection
