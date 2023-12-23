@@ -159,7 +159,7 @@ def node_callback(event, node, connected_node, data):
 
 # The main node that is able to make connections to other nodes
 # and accept connections from other nodes on port 8001.
-node = Node("127.0.0.1", 10001, node_callback)
+node = Node("127.0.0.1", 10001, callback=node_callback)
 
 # Do not forget to start it, it spins off a new thread!
 node.start()
