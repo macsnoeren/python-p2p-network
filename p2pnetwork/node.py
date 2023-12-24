@@ -202,12 +202,16 @@ class Node(threading.Thread):
             self.debug_print("TcpServer.connect_with_node: Could not connect with node. (" + str(e) + ")")
             return False
 
-    def disconnect_with_node(self, node):
+    def disconnect_with_node(self, node, strict_outbound=True):
         """Disconnect the TCP/IP connection with the specified node. It stops the node and joins the thread.
            The node will be deleted from the nodes_outbound list. Before closing, the method 
            node_disconnect_with_outbound_node is invoked."""
         if node in self.nodes_outbound:
             self.node_disconnect_with_outbound_node(node)
+            node.stop()
+
+        elif not strict_outbound and node in self.nodes_inbound:
+            self.node_disconnect_with_inbound_node(node)
             node.stop()
 
         else:
@@ -361,6 +365,13 @@ class Node(threading.Thread):
         self.debug_print("node wants to disconnect with oher outbound node: " + node.id)
         if self.callback is not None:
             self.callback("node_disconnect_with_outbound_node", self, node, {})
+
+    def node_disconnect_with_inbound_node(self, node):
+        """This method is invoked just before the connection is closed with the outbound node. From the node
+           this request is created."""
+        self.debug_print("node wants to disconnect with other inbound node: " + node.id)
+        if self.callback is not None:
+            self.callback("node_disconnect_with_inbound_node", self, node, {})
 
     def node_request_to_stop(self):
         """This method is invoked just before we will stop. A request has been given to stop the node and close
